@@ -1,0 +1,19 @@
+# CMake build output
+build/
+compile_commands.json
+
+# MediaPipe source, fetched + patched automatically by CMakeLists.txt at
+# configure time (pinned commit + bridge/opencv_linux.patch). Pure build
+# input, not our code - our own bridge source lives in bridge/, which IS
+# tracked. Delete this directory any time; the next `cmake -S . -B build`
+# regenerates it.
+third_party/mediapipe/
+
+# generated at runtime, not source
+flow_debug_log.csv
+
+# editor / OS cruft
+.vscode/
+.idea/
+*.swp
+.DS_Store
