@@ -11,17 +11,21 @@
 
 namespace miaucam {
 
-namespace {
+struct SharedMediaPipeFrame {
+    mediapipe::Image image;
+};
 
-mediapipe::Image MakeImage(const uint8_t* rgb_data, int width, int height) {
-    auto frame = std::make_shared<mediapipe::ImageFrame>();
-    frame->CopyPixelData(mediapipe::ImageFormat::SRGB, width, height,
-                          width * 3, rgb_data,
-                          mediapipe::ImageFrame::kDefaultAlignmentBoundary);
-    return mediapipe::Image(std::move(frame));
+std::shared_ptr<SharedMediaPipeFrame> CreateSharedFrame(const uint8_t* rgb_data, int width,
+                                                          int height) {
+    auto image_frame = std::make_shared<mediapipe::ImageFrame>();
+    image_frame->CopyPixelData(mediapipe::ImageFormat::SRGB, width, height,
+                                width * 3, rgb_data,
+                                mediapipe::ImageFrame::kDefaultAlignmentBoundary);
+
+    auto frame = std::make_shared<SharedMediaPipeFrame>();
+    frame->image = mediapipe::Image(std::move(image_frame));
+    return frame;
 }
-
-}  // namespace
 
 struct HandLandmarkerSession::Impl {
     std::unique_ptr<mediapipe::tasks::vision::hand_landmarker::HandLandmarker>
@@ -52,12 +56,10 @@ std::unique_ptr<HandLandmarkerSession> HandLandmarkerSession::Create(
     return session;
 }
 
-HandResult HandLandmarkerSession::DetectForVideo(const uint8_t* rgb_data,
-                                                   int width, int height,
+HandResult HandLandmarkerSession::DetectForVideo(const SharedMediaPipeFrame& frame,
                                                    int64_t timestamp_ms) {
     HandResult result;
-    auto detection = impl_->landmarker->DetectForVideo(
-        MakeImage(rgb_data, width, height), timestamp_ms);
+    auto detection = impl_->landmarker->DetectForVideo(frame.image, timestamp_ms);
     if (!detection.ok()) return result;
 
     for (const auto& hand_landmarks : detection->hand_landmarks) {
@@ -102,12 +104,10 @@ std::unique_ptr<FaceLandmarkerSession> FaceLandmarkerSession::Create(
     return session;
 }
 
-FaceResult FaceLandmarkerSession::DetectForVideo(const uint8_t* rgb_data,
-                                                   int width, int height,
+FaceResult FaceLandmarkerSession::DetectForVideo(const SharedMediaPipeFrame& frame,
                                                    int64_t timestamp_ms) {
     FaceResult result;
-    auto detection = impl_->landmarker->DetectForVideo(
-        MakeImage(rgb_data, width, height), timestamp_ms);
+    auto detection = impl_->landmarker->DetectForVideo(frame.image, timestamp_ms);
     if (!detection.ok() || detection->face_landmarks.empty()) return result;
 
     result.has_face = true;

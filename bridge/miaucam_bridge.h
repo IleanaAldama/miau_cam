@@ -39,6 +39,15 @@ struct FaceResult {
     float transform[16] = {};  // row-major 4x4, transform[r * 4 + c]
 };
 
+// Opaque handle; defined only in miaucam_bridge.cc so mediapipe::Image
+// never leaks out. shared_ptr, not unique_ptr, so it stays destructible
+// from a TU that only has this forward declaration.
+struct SharedMediaPipeFrame;
+
+// Deep-copies rgb_data once; share the result across both sessions below.
+std::shared_ptr<SharedMediaPipeFrame> CreateSharedFrame(const uint8_t* rgb_data, int width,
+                                                          int height);
+
 // Create() returns null on failure and fills *error.
 class HandLandmarkerSession {
 public:
@@ -49,9 +58,7 @@ public:
     static std::unique_ptr<HandLandmarkerSession> Create(
         const std::string& model_path, int num_hands, std::string* error);
 
-    // rgb_data: tightly packed RGB24, width * height * 3 bytes, no padding.
-    HandResult DetectForVideo(const uint8_t* rgb_data, int width, int height,
-                               int64_t timestamp_ms);
+    HandResult DetectForVideo(const SharedMediaPipeFrame& frame, int64_t timestamp_ms);
 
 private:
     HandLandmarkerSession();
@@ -69,8 +76,7 @@ public:
     static std::unique_ptr<FaceLandmarkerSession> Create(
         const std::string& model_path, int num_faces, std::string* error);
 
-    FaceResult DetectForVideo(const uint8_t* rgb_data, int width, int height,
-                               int64_t timestamp_ms);
+    FaceResult DetectForVideo(const SharedMediaPipeFrame& frame, int64_t timestamp_ms);
 
 private:
     FaceLandmarkerSession();

@@ -22,9 +22,12 @@ DetectionResult detect(LandmarkerSessions& sessions, const cv::Mat& bgr_frame, i
     cv::Mat rgb;
     cv::cvtColor(bgr_frame, rgb, cv::COLOR_BGR2RGB);
 
+    // Deep-copies rgb once; shared by both sessions instead of copying twice.
+    auto frame = CreateSharedFrame(rgb.data, rgb.cols, rgb.rows);
+
     DetectionResult result;
-    result.hand = sessions.hand->DetectForVideo(rgb.data, rgb.cols, rgb.rows, timestamp_ms);
-    result.face = sessions.face->DetectForVideo(rgb.data, rgb.cols, rgb.rows, timestamp_ms);
+    result.hand = sessions.hand->DetectForVideo(*frame, timestamp_ms);
+    result.face = sessions.face->DetectForVideo(*frame, timestamp_ms);
     return result;
 }
 
