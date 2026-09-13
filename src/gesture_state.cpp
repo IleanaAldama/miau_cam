@@ -24,6 +24,19 @@ bool face_is_fresh(const GestureState& s, double now_ms) {
     return s.last_face.has_value() && (now_ms - s.last_face->t_ms) < tuning::face_stale_ms;
 }
 
+// Exponential moving average: blends a fresh, jittery reading with the
+// running smoothed value. has_previous is false only for the very first
+// sighting (nothing to blend against yet), so that reading isn't biased
+// toward a stale default.
+double smooth(bool has_previous, double previous, double raw, double alpha) {
+    return has_previous ? alpha * raw + (1.0 - alpha) * previous : raw;
+}
+
+Vec3 smooth(bool has_previous, const Vec3& previous, const Vec3& raw, double alpha) {
+    if (!has_previous) return raw;
+    return previous * static_cast<float>(1.0 - alpha) + raw * static_cast<float>(alpha);
+}
+
 // fist / rockstar / shhh / one-finger-up / hand-covering-face /
 // hand-stretched-out / side-eye-as-fallback / default, in that order. This
 // is what a single hand gets checked against - and it's also what the
@@ -124,10 +137,24 @@ GestureState update_face(GestureState state, const FaceResult& face_result, doub
     auto snap = extract_face_snapshot(face_result, now_ms);
     if (!snap) return state;
 
+    // Smooth every continuous signal before it can reach a threshold
+    // comparison in decide() - see tuning::signal_ema_alpha for why.
+    bool had_previous = state.last_face.has_value();
+    double alpha = tuning::signal_ema_alpha;
+
+    if (had_previous) {
+        const FaceSnapshot& prev = *state.last_face;
+        snap->mouth_center = smooth(had_previous, prev.mouth_center, snap->mouth_center, alpha);
+        snap->face_width = smooth(had_previous, prev.face_width, snap->face_width, alpha);
+        snap->mouth_open = smooth(had_previous, prev.mouth_open, snap->mouth_open, alpha);
+        snap->yaw_deg = smooth(had_previous, prev.yaw_deg, snap->yaw_deg, alpha);
+    }
     state.last_face = snap;
     state.last_yaw_debug = snap->yaw_deg;
+
     if (face_result.has_transform) {
-        state.last_pitch_debug = pitch_from_transform(face_result.transform);
+        double raw_pitch = pitch_from_transform(face_result.transform);
+        state.last_pitch_debug = smooth(had_previous, state.last_pitch_debug, raw_pitch, alpha);
     }
 
     auto scores = blendshape_map(face_result);
@@ -135,11 +162,12 @@ GestureState update_face(GestureState state, const FaceResult& face_result, doub
         auto it = scores.find(k);
         return it == scores.end() ? 0.0f : it->second;
     };
-    state.last_jaw_open_debug = get("jawOpen");
-    state.last_smile_debug = std::max(get("mouthSmileLeft"), get("mouthSmileRight"));
-    state.last_brow_raise_debug = get("browInnerUp");
-    state.last_wink_debug = wink_score(scores);
-    state.last_eye_wide_debug = eye_wide_score(scores);
+    state.last_jaw_open_debug = smooth(had_previous, state.last_jaw_open_debug, get("jawOpen"), alpha);
+    state.last_smile_debug = smooth(had_previous, state.last_smile_debug,
+                                     std::max(get("mouthSmileLeft"), get("mouthSmileRight")), alpha);
+    state.last_brow_raise_debug = smooth(had_previous, state.last_brow_raise_debug, get("browInnerUp"), alpha);
+    state.last_wink_debug = smooth(had_previous, state.last_wink_debug, wink_score(scores), alpha);
+    state.last_eye_wide_debug = smooth(had_previous, state.last_eye_wide_debug, eye_wide_score(scores), alpha);
 
     return state;
 }

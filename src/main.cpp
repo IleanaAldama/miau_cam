@@ -147,7 +147,11 @@ int run() {
       meme_view =
           fit_to_height(vframe.empty() ? current_meme : vframe, frame.rows);
     } else {
-      meme_view = fit_to_height(current_meme, frame.rows);
+      cv::Mat meme = current_meme;
+      if (current_gesture == Gesture::SideEyeCat && state.last_face) {
+        meme = orient_for_yaw(meme, state.last_face->yaw_deg);
+      }
+      meme_view = fit_to_height(meme, frame.rows);
     }
     cv::imshow("Camera", frame);
     cv::imshow("Meme", meme_view);

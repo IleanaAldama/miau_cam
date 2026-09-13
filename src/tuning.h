@@ -54,5 +54,17 @@ constexpr double hand_cover_face_dist_face_seen = 0.7;
 constexpr double mouth_open_jaw_threshold = 0.5;
 constexpr double wink_threshold = 0.5;
 
+// Landmark positions jitter a few pixels frame to frame even when holding
+// still, which is enough noise to flip a threshold-based gesture (e.g.
+// handCoverFace) on and off before the stability counter can settle. All
+// continuous face signals (yaw, pitch, jaw-open, mouth/hand distances, ...)
+// get smoothed with an exponential moving average before decide() ever
+// compares them to a threshold: smoothed = alpha*new + (1-alpha)*previous.
+// Lower alpha = smoother but slower to react to a real gesture change;
+// higher alpha = snappier but noisier. 0.35 was picked to kill single-frame
+// jitter without feeling laggy - retune by watching the HUD's numbers
+// steady out (or not) while holding a pose still.
+constexpr double signal_ema_alpha = 0.35;
+
 }  // namespace tuning
 }  // namespace miaucam

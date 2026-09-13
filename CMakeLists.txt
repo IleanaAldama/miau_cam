@@ -1,4 +1,18 @@
 cmake_minimum_required(VERSION 3.16)
+
+# Prefer g++ over the generic "c++" alias (must be set before project()).
+# They're typically the same binary on Linux (c++ -> /etc/alternatives/c++
+# -> g++), but clangd's --query-driver allowlist (used to discover system
+# include paths - where <chrono>/<string>/etc. actually live) matches the
+# literal compiler path recorded in compile_commands.json, and commonly
+# whitelists g++/gcc rather than the generic c++/cc symlink name.
+if(NOT DEFINED CMAKE_CXX_COMPILER)
+    find_program(MIAUCAM_GXX g++)
+    if(MIAUCAM_GXX)
+        set(CMAKE_CXX_COMPILER ${MIAUCAM_GXX})
+    endif()
+endif()
+
 project(miaucam LANGUAGES CXX)
 
 # C++17 (the app code uses std::variant/std::visit, std::optional,
@@ -6,6 +20,12 @@ project(miaucam LANGUAGES CXX)
 # but they specifically need 17).
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# So editors/clangd see the real compiler flags (system include paths,
+# -std=gnu++17, etc.) instead of guessing and failing to find even <chrono>
+# or std::string. Baked in here rather than relying on -DCMAKE_EXPORT_
+# COMPILE_COMMANDS=ON on the command line, so it always happens.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Only pull in the modules gesture_meme.py actually uses. In particular we
 # must NOT link opencv_dnn: Ubuntu's build of it dynamically links the
@@ -113,3 +133,14 @@ target_link_libraries(miaucam PRIVATE ${OpenCV_LIBS} mediapipe_bridge)
 # in at compile time instead (mirrors gesture_meme.py's
 # ROOT = Path(__file__).parent, which is likewise independent of cwd).
 target_compile_definitions(miaucam PRIVATE MIAUCAM_ROOT="${CMAKE_SOURCE_DIR}")
+
+# clangd looks for compile_commands.json next to the source, not in build/ -
+# keep a symlink at the project root refreshed on every configure (not just
+# the first one), so it can't silently go stale/missing again. file(REMOVE)
+# first since CREATE_LINK errors if the destination already exists.
+file(REMOVE ${CMAKE_SOURCE_DIR}/compile_commands.json)
+file(CREATE_LINK
+    ${CMAKE_BINARY_DIR}/compile_commands.json
+    ${CMAKE_SOURCE_DIR}/compile_commands.json
+    SYMBOLIC
+)
