@@ -40,7 +40,7 @@ float score_or_zero(const std::unordered_map<std::string, float>& scores, const 
 double wink_score(const std::unordered_map<std::string, float>& scores) {
     float left = score_or_zero(scores, "eyeBlinkLeft");
     float right = score_or_zero(scores, "eyeBlinkRight");
-    if (std::max(left, right) < tuning::wink_threshold) return 0.0;
+    if (std::max(left, right) < tuning::expression::wink_threshold) return 0.0;
     return std::abs(left - right);
 }
 

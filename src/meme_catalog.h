@@ -14,12 +14,6 @@
 
 namespace miaucam {
 
-// Empty for video gestures - use video_file_for() instead.
-std::vector<std::string> meme_files_for(Gesture g);
-
-// Empty string for still-image gestures.
-std::string video_file_for(Gesture g);
-
 using MemeCatalog = std::unordered_map<Gesture, std::vector<cv::Mat>>;
 
 // Video gestures are streamed frame-by-frame elsewhere, not cached here.

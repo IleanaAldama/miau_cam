@@ -13,7 +13,7 @@ FlowSignal compute_frame_flow(const cv::Mat &frame, cv::Mat &prev_small_gray) {
   cv::Mat gray, small;
   cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
   cv::resize(gray, small,
-             cv::Size(tuning::spin_flow_width, tuning::spin_flow_height));
+             cv::Size(tuning::spin::flow_width, tuning::spin::flow_height));
 
   FlowSignal sig;
   if (prev_small_gray.empty()) {
@@ -30,12 +30,12 @@ FlowSignal compute_frame_flow(const cv::Mat &frame, cv::Mat &prev_small_gray) {
 
   sig.magnitude = cv::mean(cv::abs(flow_x))[0];
 
-  cv::Mat moving_mask = cv::abs(flow_x) > tuning::spin_flow_noise_floor_px;
+  cv::Mat moving_mask = cv::abs(flow_x) > tuning::spin::flow_noise_floor_px;
   int moving_count = cv::countNonZero(moving_mask);
   int total = flow_x.rows * flow_x.cols;
 
   if (static_cast<double>(moving_count) / total <
-      tuning::spin_flow_min_moving_fraction) {
+      tuning::spin::flow_min_moving_fraction) {
     sig.coherence = 0.0;
     prev_small_gray = small;
     return sig;
@@ -72,11 +72,11 @@ SpinTrackerState update_spin_tracker(SpinTrackerState state, double magnitude,
   double score = magnitude * coherence; // debug/log only, not the trigger
 
   state.flow_history.emplace_back(now_ms, magnitude);
-  prune_older_than(state.flow_history, now_ms, tuning::spin_fraction_window_ms);
+  prune_older_than(state.flow_history, now_ms, tuning::spin::fraction_window_ms);
 
   state.flow_peak_history.emplace_back(now_ms, score);
   prune_older_than(state.flow_peak_history, now_ms,
-                   tuning::spin_flow_peak_hold_ms);
+                   tuning::spin::flow_peak_hold_ms);
 
   state.last_magnitude_debug = magnitude;
   state.last_coherence_debug = coherence;
@@ -89,7 +89,7 @@ SpinTrackerState update_spin_tracker(SpinTrackerState state, double magnitude,
 
   int elevated = 0;
   for (const auto &[t, m] : state.flow_history) {
-    if (m > tuning::spin_mag_threshold)
+    if (m > tuning::spin::mag_threshold)
       elevated++;
   }
   state.last_fraction_debug =
@@ -102,7 +102,7 @@ SpinTrackerState update_spin_tracker(SpinTrackerState state, double magnitude,
 
 bool is_spinning(const SpinTrackerState &state) {
   // last_fraction_debug is kept current by update_spin_tracker every frame.
-  return state.last_fraction_debug > tuning::spin_fraction_required;
+  return state.last_fraction_debug > tuning::spin::fraction_required;
 }
 
 } // namespace miaucam

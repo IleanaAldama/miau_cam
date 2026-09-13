@@ -19,7 +19,7 @@ template <class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
 bool face_is_fresh(const GestureState& s, double now_ms) {
-    return s.last_face.has_value() && (now_ms - s.last_face->t_ms) < tuning::face_stale_ms;
+    return s.last_face.has_value() && (now_ms - s.last_face->t_ms) < tuning::stability::face_stale_ms;
 }
 
 // EMA; has_previous false only on the first sighting (nothing to blend yet).
@@ -53,15 +53,15 @@ Gesture decide_single_hand_shape(const GestureState& state, const HandInfo& h, b
     // wider tolerance once the face detector fully loses the face.
     if (fresh) {
         float d = dist(h.palm_center, state.last_face->mouth_center) / state.last_face->face_width;
-        double threshold = state.face_seen_this_frame ? tuning::hand_cover_face_dist_face_seen
-                                                        : tuning::hand_cover_face_dist_face_lost;
+        double threshold = state.face_seen_this_frame ? tuning::hand_cover_face::dist_face_seen
+                                                        : tuning::hand_cover_face::dist_face_lost;
         if (d < threshold) return Gesture::HandCoverFace;
     }
 
     if (h.curled_count == 0) return Gesture::HandStretchedOut;
 
     // let a strong side-eye read win over an ambiguous hand pose.
-    if (fresh && std::abs(state.last_face->yaw_deg) > tuning::side_eye_yaw_deg) {
+    if (fresh && std::abs(state.last_face->yaw_deg) > tuning::head_pose::side_eye_yaw_deg) {
         return Gesture::SideEyeCat;
     }
 
@@ -96,7 +96,7 @@ std::optional<Gesture> decide_two_hand_shape(const GestureState& state, const Ha
     if (a.curled_count == 0 && b.curled_count == 0) {
         float top = std::min(a.palm_center.y, b.palm_center.y);
         float bottom = std::max(a.palm_center.y, b.palm_center.y);
-        if (top < tuning::dance_top_zone_y && bottom > tuning::dance_bottom_zone_y) {
+        if (top < tuning::dance::top_zone_y && bottom > tuning::dance::bottom_zone_y) {
             return Gesture::DanceCat;
         }
     }
@@ -119,7 +119,7 @@ GestureState update_face(GestureState state, const FaceResult& face_result, doub
 
     // smooth before any threshold comparison in decide().
     bool had_previous = state.last_face.has_value();
-    double alpha = tuning::signal_ema_alpha;
+    double alpha = tuning::smoothing::ema_alpha;
 
     if (had_previous) {
         const FaceSnapshot& prev = *state.last_face;
@@ -163,27 +163,27 @@ Gesture decide(const GestureState& state, const HandResult& hand_result, double 
             [&](const NoHands&) -> Gesture {
                 // mouthOpenCat lives in OneHand/TwoHands only, so it never
                 // clashes with huhCat (mouth+no-hand vs mouth+hand).
-                if (fresh && state.last_jaw_open_debug > tuning::huh_jaw_threshold &&
-                    state.last_eye_wide_debug > tuning::eye_wide_threshold) {
+                if (fresh && state.last_jaw_open_debug > tuning::huh::jaw_threshold &&
+                    state.last_eye_wide_debug > tuning::huh::eye_wide_threshold) {
                     return Gesture::HuhCat;
                 }
-                if (fresh && std::abs(state.last_face->yaw_deg) > tuning::side_eye_yaw_deg) {
+                if (fresh && std::abs(state.last_face->yaw_deg) > tuning::head_pose::side_eye_yaw_deg) {
                     return Gesture::SideEyeCat;
                 }
-                if (fresh && state.last_pitch_debug > tuning::side_eye_down_pitch_deg) {
+                if (fresh && state.last_pitch_debug > tuning::head_pose::side_eye_down_pitch_deg) {
                     return Gesture::SideEyeDownCat;
                 }
                 return Gesture::Default;
             },
             [&](const OneHand& one) -> Gesture {
                 // any hand shape counts; checked before hand-shape logic.
-                if (fresh && state.last_jaw_open_debug > tuning::mouth_open_jaw_threshold) {
+                if (fresh && state.last_jaw_open_debug > tuning::expression::mouth_open_jaw_threshold) {
                     return Gesture::MouthOpenCat;
                 }
                 return decide_single_hand_shape(state, one.hand, fresh);
             },
             [&](const TwoHands& two) -> Gesture {
-                if (fresh && state.last_jaw_open_debug > tuning::mouth_open_jaw_threshold) {
+                if (fresh && state.last_jaw_open_debug > tuning::expression::mouth_open_jaw_threshold) {
                     return Gesture::MouthOpenCat;
                 }
                 if (auto g = decide_two_hand_shape(state, two.first, two.second, fresh)) {

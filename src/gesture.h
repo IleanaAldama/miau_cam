@@ -1,8 +1,9 @@
-// enum class instead of gesture_meme.py's strings: switch-based dispatch
-// for meme lookup/video-check instead of string comparisons.
+// enum class instead of gesture_meme.py's strings, plus one metadata table
+// (name, still/video, file list) instead of scattering that across switches.
 #pragma once
 
 #include <string>
+#include <vector>
 
 namespace miaucam {
 
@@ -25,45 +26,19 @@ enum class Gesture {
     SpinCat,
 };
 
-constexpr Gesture kAllGestures[] = {
-    Gesture::Default,       Gesture::Rockstar,        Gesture::OneFingerUp,
-    Gesture::Fist,          Gesture::Shhh,            Gesture::TwoFingersTogether,
-    Gesture::HandCoverFace, Gesture::CrashOutCat,     Gesture::TwoHandsOnHead,
-    Gesture::HandStretchedOut, Gesture::SideEyeCat,   Gesture::SideEyeDownCat,
-    Gesture::MouthOpenCat,  Gesture::HuhCat,          Gesture::DanceCat,
-    Gesture::SpinCat,
+struct GestureInfo {
+    Gesture id;
+    std::string name;
+    bool is_video;
+    std::vector<std::string> files;  // still: one or more images; video: one clip
 };
 
-inline std::string to_string(Gesture g) {
-    switch (g) {
-        case Gesture::Default: return "default";
-        case Gesture::Rockstar: return "rockstar";
-        case Gesture::OneFingerUp: return "oneFingerUp";
-        case Gesture::Fist: return "fist";
-        case Gesture::Shhh: return "shhh";
-        case Gesture::TwoFingersTogether: return "twoFingersTogether";
-        case Gesture::HandCoverFace: return "handCoverFace";
-        case Gesture::CrashOutCat: return "crashOutCat";
-        case Gesture::TwoHandsOnHead: return "twoHandsOnHead";
-        case Gesture::HandStretchedOut: return "handStretchedOut";
-        case Gesture::SideEyeCat: return "sideEyeCat";
-        case Gesture::SideEyeDownCat: return "sideEyeDownCat";
-        case Gesture::MouthOpenCat: return "mouthOpenCat";
-        case Gesture::HuhCat: return "huhCat";
-        case Gesture::DanceCat: return "danceCat";
-        case Gesture::SpinCat: return "spinCat";
-    }
-    return "unknown";
-}
+// One entry per Gesture, indexed by its enum value.
+const std::vector<GestureInfo>& all_gestures();
+const GestureInfo& info_for(Gesture g);
 
-inline bool is_video_gesture(Gesture g) {
-    switch (g) {
-        case Gesture::DanceCat:
-        case Gesture::SpinCat:
-            return true;
-        default:
-            return false;
-    }
-}
+inline const std::string& to_string(Gesture g) { return info_for(g).name; }
+inline bool is_video_gesture(Gesture g) { return info_for(g).is_video; }
+inline const std::vector<std::string>& files_for(Gesture g) { return info_for(g).files; }
 
 }  // namespace miaucam

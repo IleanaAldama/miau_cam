@@ -108,7 +108,7 @@ int run() {
       candidate_streak = 1;
     }
 
-    if (candidate_streak >= tuning::stable_frames_required &&
+    if (candidate_streak >= tuning::stability::frames_required &&
         gesture != current_gesture) {
       current_gesture = gesture;
       if (!is_video_gesture(gesture)) {
@@ -120,7 +120,7 @@ int run() {
 
     if (gesture != Gesture::Default) {
       last_non_default_at = now;
-    } else if (now - last_non_default_at > tuning::default_fallback_ms &&
+    } else if (now - last_non_default_at > tuning::stability::default_fallback_ms &&
                current_gesture != Gesture::Default) {
       current_gesture = Gesture::Default;
       current_meme = pick_meme(memes.value(), Gesture::Default, meme_rng);

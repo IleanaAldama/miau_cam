@@ -29,15 +29,15 @@ void draw_debug_hud(cv::Mat& frame, const GestureState& state, Gesture current_g
     lines.push_back("gesture: " + to_string(current_gesture));
 
     std::snprintf(buf, sizeof(buf), "yaw: %+.1f deg  (side-eye thr +/-%.1f)", state.last_yaw_debug,
-                  tuning::side_eye_yaw_deg);
+                  tuning::head_pose::side_eye_yaw_deg);
     lines.push_back(buf);
 
     std::snprintf(buf, sizeof(buf), "flow mag: %.2f  (thr %.2f)", state.spin.last_magnitude_debug,
-                  tuning::spin_mag_threshold);
+                  tuning::spin::mag_threshold);
     lines.push_back(buf);
 
     std::snprintf(buf, sizeof(buf), "spin fraction (2.2s window): %.2f  (thr %.2f)",
-                  state.spin.last_fraction_debug, tuning::spin_fraction_required);
+                  state.spin.last_fraction_debug, tuning::spin::fraction_required);
     lines.push_back(buf);
 
     std::snprintf(buf, sizeof(buf),
@@ -46,8 +46,8 @@ void draw_debug_hud(cv::Mat& frame, const GestureState& state, Gesture current_g
     lines.push_back(buf);
 
     std::snprintf(buf, sizeof(buf), "jawOpen: %.2f  eyeWide: %.2f  (huh needs both > %.2f/%.2f)",
-                  state.last_jaw_open_debug, state.last_eye_wide_debug, tuning::huh_jaw_threshold,
-                  tuning::eye_wide_threshold);
+                  state.last_jaw_open_debug, state.last_eye_wide_debug, tuning::huh::jaw_threshold,
+                  tuning::huh::eye_wide_threshold);
     lines.push_back(buf);
 
     std::snprintf(buf, sizeof(buf),
@@ -57,7 +57,7 @@ void draw_debug_hud(cv::Mat& frame, const GestureState& state, Gesture current_g
 
     std::snprintf(buf, sizeof(buf),
                   "pitch: %+.1f deg  (side-eye-down thr %.1f, unvalidated - watch this while looking down)",
-                  state.last_pitch_debug, tuning::side_eye_down_pitch_deg);
+                  state.last_pitch_debug, tuning::head_pose::side_eye_down_pitch_deg);
     lines.push_back(buf);
 
     for (size_t i = 0; i < lines.size(); ++i) {

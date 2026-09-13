@@ -17,6 +17,17 @@ cmake --build build
 First build fetches and compiles MediaPipe via Bazel (see `bridge/` and
 `CMakeLists.txt`) — it's slow once, fast after.
 
+## Tests
+
+```
+cmake --build build --target miaucam_tests
+ctest --test-dir build
+```
+
+These cover the pure logic in `src/` (geometry, hand shape classification,
+gesture decisions, meme lookups) with GoogleTest, fetched automatically the
+same way MediaPipe is. No camera or MediaPipe model needed to run them.
+
 ## Architecture
 
 The app is split by domain instead of living in one big file. Each piece

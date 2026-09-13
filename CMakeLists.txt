@@ -80,6 +80,7 @@ add_dependencies(mediapipe_bridge mediapipe_bridge_build)
 
 add_executable(miaucam
     src/main.cpp
+    src/gesture.cpp
     src/hand_classifier.cpp
     src/face_signals.cpp
     src/optical_flow.cpp
@@ -93,6 +94,38 @@ target_link_libraries(miaucam PRIVATE ${OpenCV_LIBS} mediapipe_bridge)
 
 # Binary runs from build/, so bake the source root in for asset paths.
 target_compile_definitions(miaucam PRIVATE MIAUCAM_ROOT="${CMAKE_SOURCE_DIR}")
+
+# --- Tests: the pure-logic domains only, no MediaPipe/camera needed ---
+include(FetchContent)
+FetchContent_Declare(
+    googletest
+    URL https://github.com/google/googletest/archive/refs/tags/v1.15.2.zip
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+
+enable_testing()
+add_executable(miaucam_tests
+    tests/geometry_test.cpp
+    tests/hand_classifier_test.cpp
+    tests/gesture_test.cpp
+    tests/gesture_state_test.cpp
+    tests/meme_catalog_test.cpp
+    src/gesture.cpp
+    src/hand_classifier.cpp
+    src/face_signals.cpp
+    src/optical_flow.cpp
+    src/gesture_state.cpp
+    src/meme_catalog.cpp
+)
+target_include_directories(miaucam_tests PRIVATE ${OpenCV_INCLUDE_DIRS} src ${BRIDGE_SRC_DIR})
+target_link_libraries(miaucam_tests PRIVATE ${OpenCV_LIBS} GTest::gtest_main)
+target_compile_definitions(miaucam_tests PRIVATE MIAUCAM_ROOT="${CMAKE_SOURCE_DIR}")
+
+include(GoogleTest)
+gtest_discover_tests(miaucam_tests)
 
 # Keep compile_commands.json symlinked at the root for clangd.
 file(REMOVE ${CMAKE_SOURCE_DIR}/compile_commands.json)
