@@ -1,8 +1,8 @@
 // Dense optical flow reduced to a single "is this a spin" signal.
 #pragma once
 
+#include <deque>
 #include <utility>
-#include <vector>
 
 #include <opencv2/core.hpp>
 
@@ -23,8 +23,8 @@ FlowSignal compute_frame_flow(const cv::Mat& frame, cv::Mat& prev_small_gray);
 // Trailing-window state behind the spin trigger. Plain data - updated via
 // the free function below rather than member methods.
 struct SpinTrackerState {
-    std::vector<std::pair<double, double>> flow_history;       // (t_ms, magnitude)
-    std::vector<std::pair<double, double>> flow_peak_history;  // (t_ms, score)
+    std::deque<std::pair<double, double>> flow_history;       // (t_ms, magnitude)
+    std::deque<std::pair<double, double>> flow_peak_history;  // (t_ms, score)
 
     // debug fields, surfaced on the HUD.
     double last_magnitude_debug = 0.0;

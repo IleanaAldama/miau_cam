@@ -57,12 +57,13 @@ FlowSignal compute_frame_flow(const cv::Mat &frame, cv::Mat &prev_small_gray) {
 }
 
 namespace {
-void prune_older_than(std::vector<std::pair<double, double>> &v, double now_ms,
+// Entries are appended in increasing timestamp order, so stale ones are
+// always a front prefix - pop_front is O(1) instead of a vector shift.
+void prune_older_than(std::deque<std::pair<double, double>> &q, double now_ms,
                       double window_ms) {
-  v.erase(std::remove_if(
-              v.begin(), v.end(),
-              [&](const auto &p) { return now_ms - p.first >= window_ms; }),
-          v.end());
+  while (!q.empty() && now_ms - q.front().first >= window_ms) {
+    q.pop_front();
+  }
 }
 } // namespace
 
