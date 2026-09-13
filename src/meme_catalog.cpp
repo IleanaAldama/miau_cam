@@ -54,4 +54,34 @@ Result<MemeCatalog> load_memes(const std::string& memes_dir) {
     return Result<MemeCatalog>::Ok(std::move(cache));
 }
 
+const cv::Mat& pick_meme(const MemeCatalog& catalog, Gesture g, std::mt19937& rng) {
+    const auto& imgs = catalog.at(g);
+    std::uniform_int_distribution<size_t> dist(0, imgs.size() - 1);
+    return imgs[dist(rng)];
+}
+
+Result<VideoGestureCaptures> open_video_gesture_captures(const std::string& memes_dir) {
+    VideoGestureCaptures out;
+    for (Gesture g : kAllGestures) {
+        if (!is_video_gesture(g)) continue;
+        std::string path = memes_dir + "/" + video_file_for(g);
+        cv::VideoCapture cap(path);
+        if (!cap.isOpened()) {
+            return Result<VideoGestureCaptures>::Err("missing meme file: " + path);
+        }
+        out.caps[g] = std::move(cap);
+    }
+    return Result<VideoGestureCaptures>::Ok(std::move(out));
+}
+
+cv::Mat next_video_frame(VideoGestureCaptures& video_caps, Gesture g) {
+    cv::Mat frame;
+    cv::VideoCapture& cap = video_caps.caps.at(g);
+    if (!cap.read(frame)) {
+        cap.set(cv::CAP_PROP_POS_FRAMES, 0);
+        cap.read(frame);
+    }
+    return frame;
+}
+
 }  // namespace miaucam

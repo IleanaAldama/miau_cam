@@ -13,12 +13,12 @@
 
 namespace miaucam {
 
-struct LandmarkerService {
+struct LandmarkerSessions {
     std::unique_ptr<HandLandmarkerSession> hand;
     std::unique_ptr<FaceLandmarkerSession> face;
 };
 
-Result<LandmarkerService> create_landmarker_service(const std::string& models_dir);
+Result<LandmarkerSessions> create_landmarker_sessions(const std::string& models_dir);
 
 struct DetectionResult {
     HandResult hand;
@@ -27,6 +27,6 @@ struct DetectionResult {
 
 // bgr_frame must be a standard, tightly-packed cv::Mat (as produced by
 // cv::VideoCapture::read) - not a sub-matrix/ROI.
-DetectionResult detect(LandmarkerService& service, const cv::Mat& bgr_frame, int64_t timestamp_ms);
+DetectionResult detect(LandmarkerSessions& sessions, const cv::Mat& bgr_frame, int64_t timestamp_ms);
 
 }  // namespace miaucam

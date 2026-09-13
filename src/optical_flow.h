@@ -43,7 +43,9 @@ SpinTrackerState update_spin_tracker(SpinTrackerState state, double magnitude,
 
 // A real spin keeps the flow magnitude elevated across most of a trailing
 // window; a one-off lean/reach only fills a fraction of it. See tuning.h
-// for the specific thresholds and how they were derived.
-bool is_spinning(const SpinTrackerState& state, double now_ms);
+// for the specific thresholds and how they were derived. Reads
+// last_fraction_debug, which update_spin_tracker keeps current every frame
+// - no timestamp needed here.
+bool is_spinning(const SpinTrackerState& state);
 
 }  // namespace miaucam

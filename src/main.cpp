@@ -6,7 +6,7 @@
 //   optical_flow        "is the frame spinning"
 //   gesture_state       combines the above into a named gesture
 //   meme_catalog        gesture -> asset(s) on disk
-//   landmarker_service  owns the MediaPipe sessions
+//   landmarker_sessions owns the MediaPipe sessions
 //   hud                 state -> pixels
 // This file is just wiring: open the camera/windows, run the loop.
 //
@@ -18,7 +18,6 @@
 #include <iostream>
 #include <random>
 #include <string>
-#include <unordered_map>
 
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
@@ -27,7 +26,7 @@
 #include "gesture.h"
 #include "gesture_state.h"
 #include "hud.h"
-#include "landmarker_service.h"
+#include "landmarker_sessions.h"
 #include "meme_catalog.h"
 #include "optical_flow.h"
 #include "result.h"
@@ -45,53 +44,8 @@ double now_ms() {
     return duration<double, std::milli>(steady_clock::now().time_since_epoch()).count();
 }
 
-struct VideoGestureCaptures {
-    std::unordered_map<Gesture, cv::VideoCapture> caps;
-};
-
-Result<VideoGestureCaptures> open_video_gesture_captures(const std::string& memes_dir) {
-    VideoGestureCaptures out;
-    for (Gesture g : kAllGestures) {
-        if (!is_video_gesture(g)) continue;
-        std::string path = memes_dir + "/" + video_file_for(g);
-        cv::VideoCapture cap(path);
-        if (!cap.isOpened()) {
-            return Result<VideoGestureCaptures>::Err("missing meme file: " + path);
-        }
-        out.caps[g] = std::move(cap);
-    }
-    return Result<VideoGestureCaptures>::Ok(std::move(out));
-}
-
-cv::Mat next_video_frame(VideoGestureCaptures& video_caps, Gesture g) {
-    cv::Mat frame;
-    cv::VideoCapture& cap = video_caps.caps.at(g);
-    if (!cap.read(frame)) {
-        cap.set(cv::CAP_PROP_POS_FRAMES, 0);
-        cap.read(frame);
-    }
-    return frame;
-}
-
-// Randomly picks one of a gesture's meme images (some gestures have
-// several - variety on repeat triggers).
-class MemePicker {
-public:
-    explicit MemePicker(const MemeCatalog& catalog) : catalog_(catalog), rng_(std::random_device{}()) {}
-
-    const cv::Mat& pick(Gesture g) {
-        const auto& imgs = catalog_.at(g);
-        std::uniform_int_distribution<size_t> dist(0, imgs.size() - 1);
-        return imgs[dist(rng_)];
-    }
-
-private:
-    const MemeCatalog& catalog_;
-    std::mt19937 rng_;
-};
-
 int run() {
-    auto landmarkers = create_landmarker_service(kModelsDir);
+    auto landmarkers = create_landmarker_sessions(kModelsDir);
     if (!landmarkers) {
         std::cerr << "Failed to create landmarkers: " << landmarkers.error() << std::endl;
         return 1;
@@ -131,8 +85,8 @@ int run() {
     int candidate_streak = 0;
     double last_non_default_at = now_ms();
 
-    MemePicker meme_picker(memes.value());
-    cv::Mat current_meme = meme_picker.pick(Gesture::Default);
+    std::mt19937 meme_rng{std::random_device{}()};
+    cv::Mat current_meme = pick_meme(memes.value(), Gesture::Default, meme_rng);
 
     cv::Mat prev_flow_gray;
     double start_time_ms = now_ms();
@@ -165,7 +119,7 @@ int run() {
         if (candidate_streak >= tuning::stable_frames_required && gesture != current_gesture) {
             current_gesture = gesture;
             if (!is_video_gesture(gesture)) {
-                current_meme = meme_picker.pick(gesture);
+                current_meme = pick_meme(memes.value(), gesture, meme_rng);
             } else {
                 video_caps.value().caps.at(gesture).set(cv::CAP_PROP_POS_FRAMES, 0);
             }
@@ -176,7 +130,7 @@ int run() {
         } else if (now - last_non_default_at > tuning::default_fallback_ms &&
                    current_gesture != Gesture::Default) {
             current_gesture = Gesture::Default;
-            current_meme = meme_picker.pick(Gesture::Default);
+            current_meme = pick_meme(memes.value(), Gesture::Default, meme_rng);
         }
 
         draw_landmarks(frame, detection.hand);

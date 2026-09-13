@@ -146,7 +146,7 @@ GestureState update_face(GestureState state, const FaceResult& face_result, doub
 
 Gesture decide(const GestureState& state, const HandResult& hand_result, double now_ms) {
     // spinning in the chair beats everything else, hands included.
-    if (is_spinning(state.spin, now_ms)) return Gesture::SpinCat;
+    if (is_spinning(state.spin)) return Gesture::SpinCat;
 
     bool fresh = face_is_fresh(state, now_ms);
     HandsView view = classify_hands(hand_result);
