@@ -92,10 +92,7 @@ cv::Mat fit_to_height(const cv::Mat& img, int height) {
 }
 
 cv::Mat orient_for_yaw(const cv::Mat& meme, double yaw_deg) {
-    // Sign convention matches yaw_from_transform() on the mirrored (selfie-
-    // view) camera frame - verified live, came out backwards from the
-    // first guess, so this is flipped from what the raw atan2 math alone
-    // would suggest.
+    // sign verified live; backwards from what raw atan2 math suggests.
     if (yaw_deg < 0.0) return meme;
     cv::Mat flipped;
     cv::flip(meme, flipped, 1);

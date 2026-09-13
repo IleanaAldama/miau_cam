@@ -10,9 +10,7 @@ namespace miaucam {
 
 namespace {
 
-// Poor man's pattern matching: an overload set built from lambdas, used
-// with std::visit below so the hand-count dispatch reads as "for this
-// shape of input, do this" instead of an if/else on hands.size().
+// std::visit overload set - pattern-matches on hand count.
 template <class... Ts>
 struct overloaded : Ts... {
     using Ts::operator()...;
@@ -24,10 +22,7 @@ bool face_is_fresh(const GestureState& s, double now_ms) {
     return s.last_face.has_value() && (now_ms - s.last_face->t_ms) < tuning::face_stale_ms;
 }
 
-// Exponential moving average: blends a fresh, jittery reading with the
-// running smoothed value. has_previous is false only for the very first
-// sighting (nothing to blend against yet), so that reading isn't biased
-// toward a stale default.
+// EMA; has_previous false only on the first sighting (nothing to blend yet).
 double smooth(bool has_previous, double previous, double raw, double alpha) {
     return has_previous ? alpha * raw + (1.0 - alpha) * previous : raw;
 }
@@ -37,11 +32,8 @@ Vec3 smooth(bool has_previous, const Vec3& previous, const Vec3& raw, double alp
     return previous * static_cast<float>(1.0 - alpha) + raw * static_cast<float>(alpha);
 }
 
-// fist / rockstar / shhh / one-finger-up / hand-covering-face /
-// hand-stretched-out / side-eye-as-fallback / default, in that order. This
-// is what a single hand gets checked against - and it's also what the
-// *first* hand of a two-hand frame falls back to once neither
-// twoFingersTogether, twoHandsOnHead, crashOutCat nor danceCat matched.
+// Also the fallback for a two-hand frame's first hand once no two-hand
+// shape matched.
 Gesture decide_single_hand_shape(const GestureState& state, const HandInfo& h, bool fresh) {
     if (h.curled_count == 4) return Gesture::Fist;
 
@@ -49,9 +41,7 @@ Gesture decide_single_hand_shape(const GestureState& state, const HandInfo& h, b
         return Gesture::Rockstar;
     }
 
-    // shhh / one-finger-up: a single extended index finger, checked before
-    // the broader hand-covering-face test below so shhh (finger on the
-    // mouth) doesn't get swallowed by "any hand near the face".
+    // checked before hand-cover-face so shhh isn't swallowed by it.
     if (h.index_up && !h.middle_up && !h.ring_up && !h.pinky_up) {
         if (fresh) {
             float d = dist(h.index_tip, state.last_face->mouth_center) / state.last_face->face_width;
@@ -60,9 +50,7 @@ Gesture decide_single_hand_shape(const GestureState& state, const HandInfo& h, b
         return Gesture::OneFingerUp;
     }
 
-    // hand covering face: the one hand we see sits roughly where the face
-    // last was. Wider tolerance if the face detector has fully lost the
-    // face; tighter if it's still partially tracking through the fingers.
+    // wider tolerance once the face detector fully loses the face.
     if (fresh) {
         float d = dist(h.palm_center, state.last_face->mouth_center) / state.last_face->face_width;
         double threshold = state.face_seen_this_frame ? tuning::hand_cover_face_dist_face_seen
@@ -72,8 +60,7 @@ Gesture decide_single_hand_shape(const GestureState& state, const HandInfo& h, b
 
     if (h.curled_count == 0) return Gesture::HandStretchedOut;
 
-    // hands are up but not making a specific shape - still allow a strong
-    // side-eye read to win over an ambiguous hand pose.
+    // let a strong side-eye read win over an ambiguous hand pose.
     if (fresh && std::abs(state.last_face->yaw_deg) > tuning::side_eye_yaw_deg) {
         return Gesture::SideEyeCat;
     }
@@ -81,10 +68,7 @@ Gesture decide_single_hand_shape(const GestureState& state, const HandInfo& h, b
     return Gesture::Default;
 }
 
-// twoFingersTogether / twoHandsOnHead / crashOutCat / danceCat - the
-// gestures that only make sense as a *pair* of hands. nullopt means "none
-// of these matched", so the caller falls through to the single-hand shape
-// logic on the first hand, exactly like gesture_meme.py's `h = hands[0]`.
+// nullopt means the caller falls through to decide_single_hand_shape.
 std::optional<Gesture> decide_two_hand_shape(const GestureState& state, const HandInfo& a,
                                                const HandInfo& b, bool fresh) {
     if (is_pointing(a) && is_pointing(b)) {
@@ -103,16 +87,12 @@ std::optional<Gesture> decide_two_hand_shape(const GestureState& state, const Ha
             bool both_above_head = a.palm_center.y < head_top_y && b.palm_center.y < head_top_y;
             if (both_above_head) return Gesture::TwoHandsOnHead;
 
-            // crashOutCat requires both hands to actually be clenched
-            // fists - an open hand near the face falls through instead of
-            // getting swallowed by this.
+            // requires both fists; an open hand near the face falls through.
             if (a.curled_count == 4 && b.curled_count == 4) return Gesture::CrashOutCat;
         }
     }
 
-    // danceCat: both hands showing open palms, one near the TOP of the
-    // screen and the other near the BOTTOM - absolute frame position,
-    // doesn't matter which hand is on top.
+    // one hand near the top of the frame, one near the bottom, either order.
     if (a.curled_count == 0 && b.curled_count == 0) {
         float top = std::min(a.palm_center.y, b.palm_center.y);
         float bottom = std::max(a.palm_center.y, b.palm_center.y);
@@ -137,8 +117,7 @@ GestureState update_face(GestureState state, const FaceResult& face_result, doub
     auto snap = extract_face_snapshot(face_result, now_ms);
     if (!snap) return state;
 
-    // Smooth every continuous signal before it can reach a threshold
-    // comparison in decide() - see tuning::signal_ema_alpha for why.
+    // smooth before any threshold comparison in decide().
     bool had_previous = state.last_face.has_value();
     double alpha = tuning::signal_ema_alpha;
 
@@ -182,11 +161,8 @@ Gesture decide(const GestureState& state, const HandResult& hand_result, double 
     return std::visit(
         overloaded{
             [&](const NoHands&) -> Gesture {
-                // no hands: side-eye and huh are both face-only poses, and
-                // BOTH require no hands visible - mouthOpenCat lives only
-                // in the OneHand/TwoHands cases below, specifically so it
-                // can never clash with huhCat: huhCat needs mouth-open
-                // with no hand, mouthOpenCat needs mouth-open WITH a hand.
+                // mouthOpenCat lives in OneHand/TwoHands only, so it never
+                // clashes with huhCat (mouth+no-hand vs mouth+hand).
                 if (fresh && state.last_jaw_open_debug > tuning::huh_jaw_threshold &&
                     state.last_eye_wide_debug > tuning::eye_wide_threshold) {
                     return Gesture::HuhCat;
@@ -200,10 +176,7 @@ Gesture decide(const GestureState& state, const HandResult& hand_result, double 
                 return Gesture::Default;
             },
             [&](const OneHand& one) -> Gesture {
-                // mouthOpenCat: mouth open AND a hand visible somewhere in
-                // frame - any hand shape counts. Checked before hand-shape-
-                // specific logic so an open mouth with a hand up (eating,
-                // talking with your hands) reads as this.
+                // any hand shape counts; checked before hand-shape logic.
                 if (fresh && state.last_jaw_open_debug > tuning::mouth_open_jaw_threshold) {
                     return Gesture::MouthOpenCat;
                 }

@@ -23,10 +23,6 @@ mediapipe::Image MakeImage(const uint8_t* rgb_data, int width, int height) {
 
 }  // namespace
 
-// ---------------------------------------------------------------------------
-// HandLandmarkerSession
-// ---------------------------------------------------------------------------
-
 struct HandLandmarkerSession::Impl {
     std::unique_ptr<mediapipe::tasks::vision::hand_landmarker::HandLandmarker>
         landmarker;
@@ -74,10 +70,6 @@ HandResult HandLandmarkerSession::DetectForVideo(const uint8_t* rgb_data,
     }
     return result;
 }
-
-// ---------------------------------------------------------------------------
-// FaceLandmarkerSession
-// ---------------------------------------------------------------------------
 
 struct FaceLandmarkerSession::Impl {
     std::unique_ptr<mediapipe::tasks::vision::face_landmarker::FaceLandmarker>

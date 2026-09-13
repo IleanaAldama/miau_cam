@@ -1,8 +1,4 @@
-// A tiny Result<T> for railway-oriented error handling: functions that can
-// fail return a Result instead of throwing, and callers pattern-match on
-// ok()/error() instead of wrapping calls in try/catch. Mirrors the shape
-// the MediaPipe bridge already uses (Create() returns null + fills
-// *error), just made explicit and reusable on the app side.
+// Result<T> for railway-oriented error handling instead of exceptions.
 #pragma once
 
 #include <optional>

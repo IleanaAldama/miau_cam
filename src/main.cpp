@@ -1,16 +1,5 @@
-// Webcam gesture -> meme detector (desktop version). C++ port of
-// gesture_meme.py, split into domains (see the other files in src/):
-//   geometry            pure vector math
-//   hand_classifier     "what is this hand doing"
-//   face_signals        "what is this face doing"
-//   optical_flow        "is the frame spinning"
-//   gesture_state       combines the above into a named gesture
-//   meme_catalog        gesture -> asset(s) on disk
-//   landmarker_sessions owns the MediaPipe sessions
-//   hud                 state -> pixels
-// This file is just wiring: open the camera/windows, run the loop.
-//
-// Press q or ESC to quit.
+// Webcam gesture -> meme detector. This file is just wiring; see the
+// other files in src/ for the actual domains. Press q or ESC to quit.
 
 #include <chrono>
 #include <fstream>
@@ -76,8 +65,7 @@ int run() {
   cv::moveWindow("Camera", 40, 80);
   cv::moveWindow("Meme", 720, 80);
 
-  // every frame's flow numbers get logged here, timestamped - so the raw
-  // numbers from a real spin attempt can be inspected afterward.
+  // per-frame flow numbers, for tuning spin detection afterward.
   std::ofstream flow_log(kRoot + "/flow_debug_log.csv");
   flow_log << "t_ms,magnitude,coherence,score,fraction,peak_2s,gesture\n";
 

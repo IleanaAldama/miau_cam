@@ -1,6 +1,4 @@
-// Motion detection: dense optical flow reduced to a single "is this a
-// spin" signal. Deliberately independent of landmarks - a spin is read
-// from how much of the whole frame is moving, not from any hand/face pose.
+// Dense optical flow reduced to a single "is this a spin" signal.
 #pragma once
 
 #include <utility>

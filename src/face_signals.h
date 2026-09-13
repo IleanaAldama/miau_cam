@@ -1,5 +1,4 @@
-// "What is the face doing" - mouth/cheek geometry and blendshape scores,
-// independent of what gesture they map to.
+// "What is the face doing" - mouth/cheek geometry and blendshape scores.
 #pragma once
 
 #include <optional>
@@ -23,13 +22,10 @@ std::optional<FaceSnapshot> extract_face_snapshot(const FaceResult& face_result,
 
 std::unordered_map<std::string, float> blendshape_map(const FaceResult& f);
 
-// One eye closed, the other open - the absolute gap between the two blink
-// scores, only counted once at least one eye is clearly closing (otherwise
-// two half-lowered eyes would also read as a "gap").
+// gap between the two blink scores, once one eye is clearly closing.
 double wink_score(const std::unordered_map<std::string, float>& scores);
 
-// max(eyeWideLeft, eyeWideRight) - for huhCat (mouth open AND eyes wide,
-// distinct from mouthOpenCat which is mouth-open alone).
+// max(eyeWideLeft, eyeWideRight).
 double eye_wide_score(const std::unordered_map<std::string, float>& scores);
 
 }  // namespace miaucam

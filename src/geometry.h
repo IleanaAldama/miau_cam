@@ -1,5 +1,4 @@
-// Pure geometry helpers - no app-specific meaning, just vector math over
-// landmark points. Ported from the JS/Python versions' geometry helpers.
+// Pure vector math over landmark points, no app-specific meaning.
 #pragma once
 
 #include <algorithm>
@@ -33,8 +32,7 @@ inline bool finger_extended(const std::vector<Vec3>& pts, int mcp, int pip, int 
     return angle_deg(v1, v2) < 45.0;
 }
 
-// Extract yaw (left/right turn) from a row-major 4x4 facial transformation
-// matrix - MediaPipe's own head pose estimate, not a hand-rolled heuristic.
+// Yaw (left/right turn) from a row-major 4x4 facial transformation matrix.
 inline double yaw_from_transform(const float m[16]) {
     auto r = [&](int i, int j) { return m[i * 4 + j]; };
     double sy = std::sqrt(r(0, 0) * r(0, 0) + r(1, 0) * r(1, 0));
@@ -42,8 +40,7 @@ inline double yaw_from_transform(const float m[16]) {
     return std::atan2(-r(2, 0), sy) * 180.0 / M_PI;
 }
 
-// Same idea, for pitch (up/down tilt). Unvalidated against real degrees the
-// way yaw was - see tuning.h's side_eye_down_pitch_deg comment.
+// Pitch (up/down tilt); sign unvalidated, see tuning.h.
 inline double pitch_from_transform(const float m[16]) {
     auto r = [&](int i, int j) { return m[i * 4 + j]; };
     return std::atan2(r(2, 1), r(2, 2)) * 180.0 / M_PI;

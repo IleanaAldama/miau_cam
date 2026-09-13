@@ -1,8 +1,5 @@
-// The set of gestures this app recognizes. gesture_meme.py used plain
-// strings for this everywhere; an enum class gets the same job done with
-// compiler-checked exhaustiveness (missing a case in a switch is a warning,
-// not a silent typo) and lets meme lookup / video-vs-still dispatch read as
-// pattern matching instead of string comparisons.
+// enum class instead of gesture_meme.py's strings: switch-based dispatch
+// for meme lookup/video-check instead of string comparisons.
 #pragma once
 
 #include <string>
@@ -28,8 +25,6 @@ enum class Gesture {
     SpinCat,
 };
 
-// Every gesture, for code that needs to iterate all of them (e.g. loading
-// every still-image meme up front).
 constexpr Gesture kAllGestures[] = {
     Gesture::Default,       Gesture::Rockstar,        Gesture::OneFingerUp,
     Gesture::Fist,          Gesture::Shhh,            Gesture::TwoFingersTogether,
@@ -39,7 +34,6 @@ constexpr Gesture kAllGestures[] = {
     Gesture::SpinCat,
 };
 
-// Human-readable name, for the debug HUD and the flow log CSV.
 inline std::string to_string(Gesture g) {
     switch (g) {
         case Gesture::Default: return "default";
@@ -62,7 +56,6 @@ inline std::string to_string(Gesture g) {
     return "unknown";
 }
 
-// Gestures whose meme is a video, not a still image.
 inline bool is_video_gesture(Gesture g) {
     switch (g) {
         case Gesture::DanceCat:

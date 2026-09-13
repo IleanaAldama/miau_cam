@@ -100,9 +100,7 @@ SpinTrackerState update_spin_tracker(SpinTrackerState state, double magnitude,
 }
 
 bool is_spinning(const SpinTrackerState &state) {
-  // flow_history is already pruned by update_spin_tracker every frame, so
-  // re-pruning here isn't needed the way the Python version did it
-  // defensively - last_fraction_debug is always current.
+  // last_fraction_debug is kept current by update_spin_tracker every frame.
   return state.last_fraction_debug > tuning::spin_fraction_required;
 }
 

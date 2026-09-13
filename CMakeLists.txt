@@ -1,11 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-# Prefer g++ over the generic "c++" alias (must be set before project()).
-# They're typically the same binary on Linux (c++ -> /etc/alternatives/c++
-# -> g++), but clangd's --query-driver allowlist (used to discover system
-# include paths - where <chrono>/<string>/etc. actually live) matches the
-# literal compiler path recorded in compile_commands.json, and commonly
-# whitelists g++/gcc rather than the generic c++/cc symlink name.
+# clangd's --query-driver allowlist expects g++, not the generic c++ alias.
 if(NOT DEFINED CMAKE_CXX_COMPILER)
     find_program(MIAUCAM_GXX g++)
     if(MIAUCAM_GXX)
@@ -15,42 +10,15 @@ endif()
 
 project(miaucam LANGUAGES CXX)
 
-# C++17 (the app code uses std::variant/std::visit, std::optional,
-# std::clamp and structured bindings - all "C++14 or newer" is happy with,
-# but they specifically need 17).
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# So editors/clangd see the real compiler flags (system include paths,
-# -std=gnu++17, etc.) instead of guessing and failing to find even <chrono>
-# or std::string. Baked in here rather than relying on -DCMAKE_EXPORT_
-# COMPILE_COMMANDS=ON on the command line, so it always happens.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Only pull in the modules gesture_meme.py actually uses. In particular we
-# must NOT link opencv_dnn: Ubuntu's build of it dynamically links the
-# system libprotobuf, while MediaPipe (below) statically links its own
-# (different, incompatible) protobuf into the same process - both try to
-# register the same well-known .proto descriptors into the global
-# DescriptorPool at startup, which aborts with a protobuf CHECK failure.
+# Not opencv_dnn: its system libprotobuf clashes with MediaPipe's own
+# statically-linked protobuf (two runtimes, one process -> abort).
 find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs videoio highgui video)
 
-# --- MediaPipe (built via Bazel, linked in as a prebuilt shared library) ---
-#
-# MediaPipe's own build system is Bazel, not CMake, and it isn't published
-# as a prebuilt package anywhere (no apt/vcpkg/conan, no CMake config) - the
-# only way to get its C++ Tasks API is to compile it from its own source
-# tree. That source tree (third_party/mediapipe/) is pure build INPUT, not
-# our code: it's fetched automatically below, pinned to a known-good commit,
-# and gitignored entirely - deleting it and reconfiguring regenerates it.
-#
-# Our own bridge code lives in bridge/ (tracked normally in git) and wraps
-# the HandLandmarker/FaceLandmarker Tasks C++ API behind a plain header, so
-# CMake/main.cpp never sees MediaPipe's internal build graph or types - only
-# bridge/miaucam_bridge.h and the resulting .so. Bazel needs our bridge's
-# BUILD file to live inside the MediaPipe workspace to resolve its internal
-# target labels, so the build step below mirrors bridge/ into the vendored
-# tree before invoking bazel; bridge/ is what you actually edit.
+# --- MediaPipe: fetched + built via Bazel, our own code stays in bridge/ ---
 set(MEDIAPIPE_DIR ${CMAKE_SOURCE_DIR}/third_party/mediapipe)
 set(MEDIAPIPE_COMMIT d4f197be5af7c0db497a9eea6ee07d1d4710d2be)
 set(BRIDGE_SRC_DIR ${CMAKE_SOURCE_DIR}/bridge)
@@ -61,11 +29,8 @@ set(MEDIAPIPE_BRIDGE_LIB ${MEDIAPIPE_DIR}/bazel-bin/${MEDIAPIPE_BRIDGE_PKG}/libm
 find_program(BAZEL_EXECUTABLE bazel REQUIRED)
 find_package(Git REQUIRED)
 
-# One-time setup: fetch MediaPipe at the pinned commit and apply the local
-# patch that fixes its OpenCV BUILD rule for Ubuntu/Debian's opencv4 layout
-# (see bridge/opencv_linux.patch for why). Only runs if the tree is missing,
-# so it survives `rm -rf third_party/mediapipe` but not repeated
-# reconfigures.
+# third_party/mediapipe/ is gitignored, disposable build input - fetched
+# once at the pinned commit, patched for Ubuntu's opencv4 layout.
 if(NOT EXISTS ${MEDIAPIPE_DIR}/.git)
     message(STATUS "Fetching MediaPipe @ ${MEDIAPIPE_COMMIT} (one-time, ~100MB)")
     execute_process(
@@ -84,10 +49,8 @@ if(NOT EXISTS ${MEDIAPIPE_DIR}/.git)
     )
 endif()
 
-# Every build: mirror our tracked bridge sources into the vendored tree,
-# then ask Bazel to build the .so. Depending on the bridge sources (not
-# just running once at configure time) means editing bridge/miaucam_bridge.cc
-# and running `cmake --build build` alone picks up the change.
+# Bazel needs our bridge's BUILD file inside the MediaPipe tree to resolve
+# its target labels, so mirror bridge/ in on every build.
 set(BRIDGE_SOURCES
     ${BRIDGE_SRC_DIR}/miaucam_bridge.h
     ${BRIDGE_SRC_DIR}/miaucam_bridge.cc
@@ -128,16 +91,10 @@ add_executable(miaucam
 target_include_directories(miaucam PRIVATE ${OpenCV_INCLUDE_DIRS})
 target_link_libraries(miaucam PRIVATE ${OpenCV_LIBS} mediapipe_bridge)
 
-# The binary lands in build/, not the project root, so relative paths like
-# "models/..." only work if you happen to run from the root. Bake the root
-# in at compile time instead (mirrors gesture_meme.py's
-# ROOT = Path(__file__).parent, which is likewise independent of cwd).
+# Binary runs from build/, so bake the source root in for asset paths.
 target_compile_definitions(miaucam PRIVATE MIAUCAM_ROOT="${CMAKE_SOURCE_DIR}")
 
-# clangd looks for compile_commands.json next to the source, not in build/ -
-# keep a symlink at the project root refreshed on every configure (not just
-# the first one), so it can't silently go stale/missing again. file(REMOVE)
-# first since CREATE_LINK errors if the destination already exists.
+# Keep compile_commands.json symlinked at the root for clangd.
 file(REMOVE ${CMAKE_SOURCE_DIR}/compile_commands.json)
 file(CREATE_LINK
     ${CMAKE_BINARY_DIR}/compile_commands.json

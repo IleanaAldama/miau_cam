@@ -1,5 +1,4 @@
-// "What is this hand doing" - turns raw hand landmarks into a shape
-// description, independent of what gesture that shape maps to.
+// "What is this hand doing" - a shape description, independent of gesture.
 #pragma once
 
 #include <variant>
@@ -23,10 +22,7 @@ inline bool is_pointing(const HandInfo& h) {
     return h.index_up && !h.middle_up && !h.ring_up && !h.pinky_up;
 }
 
-// A pattern-matchable view of "how many hands, and what shape are they":
-// classify_hands() turns MediaPipe's flat vector<Hand> into exactly one of
-// these three, so callers std::visit over the shape instead of branching on
-// hand_result.hands.size().
+// Lets callers std::visit over hand count instead of branching on size().
 struct NoHands {};
 struct OneHand {
     HandInfo hand;
@@ -37,8 +33,6 @@ struct TwoHands {
 };
 using HandsView = std::variant<NoHands, OneHand, TwoHands>;
 
-// Only ever produces NoHands/OneHand/TwoHands - MediaPipe is configured
-// with num_hands = 2, so more than two is not a case that occurs.
 HandsView classify_hands(const HandResult& hand_result);
 
 }  // namespace miaucam

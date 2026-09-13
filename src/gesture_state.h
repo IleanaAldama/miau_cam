@@ -1,8 +1,6 @@
-// The gesture decision machine: consumes hand_classifier + face_signals +
-// optical_flow outputs and names what's being seen. Plain data plus free
-// functions rather than a class with methods - update_flow/update_face take
-// the previous state by value and return the next one, so state transitions
-// are explicit at the call site instead of hidden inside method bodies.
+// Combines hand_classifier + face_signals + optical_flow into a named
+// gesture. Plain data plus free functions: update_flow/update_face take the
+// previous state by value and return the next one.
 #pragma once
 
 #include <optional>
@@ -32,9 +30,7 @@ struct GestureState {
 GestureState update_flow(GestureState state, double magnitude, double coherence, double now_ms);
 GestureState update_face(GestureState state, const FaceResult& face_result, double now_ms);
 
-// Names the current gesture. Priority order matches gesture_meme.py exactly
-// (spin beats everything; mouth-open-with-a-hand beats hand-shape reads;
-// etc) - see gesture_state.cpp for the reasoning behind each branch.
+// Priority order matches gesture_meme.py exactly - see gesture_state.cpp.
 Gesture decide(const GestureState& state, const HandResult& hand_result, double now_ms);
 
 }  // namespace miaucam
