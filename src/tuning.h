@@ -52,5 +52,22 @@ namespace smoothing {
 constexpr double ema_alpha = 0.35;
 }  // namespace smoothing
 
+namespace shhh {
+constexpr double mouth_dist = 0.55;
+}  // namespace shhh
+
+namespace two_fingers {
+constexpr double tip_gap_factor = 1.4;
+}  // namespace two_fingers
+
+namespace two_hands {
+constexpr double near_face_factor = 2.2;
+constexpr double head_top_face_widths = 1.1;
+}  // namespace two_hands
+
+namespace hand_shape {
+constexpr double thumb_out_spread = 1.05;
+}  // namespace hand_shape
+
 }  // namespace tuning
 }  // namespace miaucam

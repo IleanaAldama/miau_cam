@@ -45,7 +45,7 @@ Gesture decide_single_hand_shape(const GestureState& state, const HandInfo& h, b
     if (h.index_up && !h.middle_up && !h.ring_up && !h.pinky_up) {
         if (fresh) {
             float d = dist(h.index_tip, state.last_face->mouth_center) / state.last_face->face_width;
-            if (d < 0.55f) return Gesture::Shhh;
+            if (d < tuning::shhh::mouth_dist) return Gesture::Shhh;
         }
         return Gesture::OneFingerUp;
     }
@@ -74,16 +74,18 @@ std::optional<Gesture> decide_two_hand_shape(const GestureState& state, const Ha
     if (is_pointing(a) && is_pointing(b)) {
         float avg_scale = (a.hand_scale + b.hand_scale) / 2.0f;
         float tip_gap = dist(a.index_tip, b.index_tip) / avg_scale;
-        if (tip_gap < 1.4f) return Gesture::TwoFingersTogether;
+        if (tip_gap < tuning::two_fingers::tip_gap_factor) return Gesture::TwoFingersTogether;
     }
 
     if (fresh) {
         const Vec3& mouth_center = state.last_face->mouth_center;
         float face_width = state.last_face->face_width;
-        bool near_face = dist(a.palm_center, mouth_center) / face_width < 2.2f &&
-                          dist(b.palm_center, mouth_center) / face_width < 2.2f;
+        bool near_face = dist(a.palm_center, mouth_center) / face_width <
+                             tuning::two_hands::near_face_factor &&
+                          dist(b.palm_center, mouth_center) / face_width <
+                             tuning::two_hands::near_face_factor;
         if (near_face) {
-            float head_top_y = mouth_center.y - face_width * 1.1f;
+            float head_top_y = mouth_center.y - face_width * tuning::two_hands::head_top_face_widths;
             bool both_above_head = a.palm_center.y < head_top_y && b.palm_center.y < head_top_y;
             if (both_above_head) return Gesture::TwoHandsOnHead;
 

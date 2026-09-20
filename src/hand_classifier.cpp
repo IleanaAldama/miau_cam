@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include "tuning.h"
+
 namespace miaucam {
 
 HandInfo classify_hand(const Hand& hand) {
@@ -18,7 +20,7 @@ HandInfo classify_hand(const Hand& hand) {
     h.pinky_up = finger_extended(pts, 17, 18, 20);
 
     float thumb_pinky_spread = dist(pts[4], pts[17]) / h.hand_scale;
-    h.thumb_out = thumb_pinky_spread > 1.05f;
+    h.thumb_out = thumb_pinky_spread > tuning::hand_shape::thumb_out_spread;
 
     const bool extended[] = {h.index_up, h.middle_up, h.ring_up, h.pinky_up};
     h.curled_count =
