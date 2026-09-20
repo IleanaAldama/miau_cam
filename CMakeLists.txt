@@ -115,11 +115,14 @@ add_executable(miaucam_tests
     tests/gesture_test.cpp
     tests/gesture_state_test.cpp
     tests/meme_catalog_test.cpp
+    tests/detection_input_test.cpp
     src/gesture.cpp
     src/hand_classifier.cpp
     src/face_signals.cpp
     src/optical_flow.cpp
     src/gesture_state.cpp
+    src/frame_pipeline.cpp
+    src/detection_input.cpp
     src/meme_catalog.cpp
 )
 target_include_directories(miaucam_tests PRIVATE ${OpenCV_INCLUDE_DIRS} src ${BRIDGE_SRC_DIR})

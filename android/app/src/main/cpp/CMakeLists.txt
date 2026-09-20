@@ -18,6 +18,7 @@ add_library(miaucam_native SHARED
     ${MIAUCAM_ROOT}/src/optical_flow.cpp
     ${MIAUCAM_ROOT}/src/gesture_state.cpp
     ${MIAUCAM_ROOT}/src/frame_pipeline.cpp
+    ${MIAUCAM_ROOT}/src/detection_input.cpp
 )
 target_include_directories(miaucam_native PRIVATE ${MIAUCAM_ROOT}/src ${MIAUCAM_ROOT}/bridge)
 target_link_libraries(miaucam_native PRIVATE ${OpenCV_LIBS} log)
