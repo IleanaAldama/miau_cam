@@ -1,28 +1,31 @@
-# CMake build output
+# CMake
 build/
-android/build/
 compile_commands.json
+.cache/
 
-# Gradle - local.properties has machine-specific SDK paths
+# Android / Gradle
+android/build/
 android/.gradle/
-android/app/build/
+android/.kotlin/
 android/local.properties
+android/app/build/
+android/app/.cxx/
+android/app/.externalNativeBuild/
+*.apk
+*.aab
+*.hprof
 
-# MediaPipe source, fetched + patched automatically by CMakeLists.txt at
-# configure time (pinned commit + bridge/opencv_linux.patch). Pure build
-# input, not our code - our own bridge source lives in bridge/, which IS
-# tracked. Delete this directory any time; the next `cmake -S . -B build`
-# regenerates it.
+# Third party (MediaPipe is fetched by CMake, OpenCV Android SDK by hand)
 third_party/mediapipe/
+android/third_party/opencv/
 
-# generated at runtime, not source
+# Runtime output
 flow_debug_log.csv
 
-# editor / OS cruft
+# Editor / OS / tool state
 .vscode/
 .idea/
+*.iml
 *.swp
 .DS_Store
-
-# OpenCV Android SDK, downloaded by hand (see android/README.md)
-android/third_party/opencv/
+.claude/

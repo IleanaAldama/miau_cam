@@ -87,6 +87,7 @@ add_executable(miaucam
     src/gesture_state.cpp
     src/meme_catalog.cpp
     src/landmarker_sessions.cpp
+    src/frame_pipeline.cpp
     src/miaucam_core.cpp
     src/hud.cpp
 )
