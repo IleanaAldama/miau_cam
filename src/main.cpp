@@ -107,8 +107,12 @@ int run() {
             cv::Mat vframe = next_video_frame(video_caps.value(), output.gesture);
             meme_view = fit_to_height(vframe.empty() ? current_meme : vframe, frame.rows);
         } else {
-            cv::Mat meme = current_meme;
-            if (flip_meme(state)) cv::flip(meme, meme, 1);
+            cv::Mat meme;
+            if (flip_meme(state)) {
+                cv::flip(current_meme, meme, 1);
+            } else {
+                meme = current_meme;
+            }
             meme_view = fit_to_height(meme, frame.rows);
         }
         cv::imshow("Camera", frame);
