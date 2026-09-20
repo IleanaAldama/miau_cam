@@ -18,6 +18,7 @@ const canvas = document.createElement("canvas");
 const ctx = canvas.getContext("2d", { willReadFrequently: true });
 
 let facing = "user";
+let paused = false;
 let last_ts = 0;
 let gesture = -1;
 let fps_frames = 0;
@@ -25,20 +26,23 @@ let fps_since = performance.now();
 
 async function create_landmarkers() {
   const fileset = await FilesetResolver.forVisionTasks(MEDIAPIPE_WASM);
-  const build = async (delegate) => ({
-    hand: await HandLandmarker.createFromOptions(fileset, {
-      baseOptions: { modelAssetPath: "../models/hand_landmarker.task", delegate },
-      runningMode: "VIDEO",
-      numHands: 2,
-    }),
-    face: await FaceLandmarker.createFromOptions(fileset, {
-      baseOptions: { modelAssetPath: "../models/face_landmarker.task", delegate },
-      runningMode: "VIDEO",
-      numFaces: 1,
-      outputFaceBlendshapes: true,
-      outputFacialTransformationMatrixes: true,
-    }),
-  });
+  const build = async (delegate) => {
+    const [hand, face] = await Promise.all([
+      HandLandmarker.createFromOptions(fileset, {
+        baseOptions: { modelAssetPath: "../models/hand_landmarker.task", delegate },
+        runningMode: "VIDEO",
+        numHands: 2,
+      }),
+      FaceLandmarker.createFromOptions(fileset, {
+        baseOptions: { modelAssetPath: "../models/face_landmarker.task", delegate },
+        runningMode: "VIDEO",
+        numFaces: 1,
+        outputFaceBlendshapes: true,
+        outputFacialTransformationMatrixes: true,
+      }),
+    ]);
+    return { hand, face };
+  };
   return build("GPU").catch(() => build("CPU"));
 }
 
@@ -59,10 +63,21 @@ function flatten(points) {
   return points.flatMap((p) => [p.x, p.y, p.z]);
 }
 
+const meme_url = (file) => `../memes/${encodeURIComponent(file)}`;
+
+// Warms the HTTP cache one file at a time so later gestures show instantly.
+async function preload_memes(core) {
+  for (let index = 0; index < core.gesture_count(); index++) {
+    for (const file of core.meme_files(index)) {
+      await fetch(meme_url(file)).then((response) => response.blob()).catch(() => {});
+    }
+  }
+}
+
 function show_meme(core, index) {
   const files = core.meme_files(index);
   const file = files[Math.floor(Math.random() * files.length)];
-  const url = `../memes/${encodeURIComponent(file)}`;
+  const url = meme_url(file);
 
   if (core.is_video(index)) {
     memeVideo.src = url;
@@ -118,6 +133,7 @@ function update_fps() {
   fps_frames += 1;
   const now = performance.now();
   if (now - fps_since < 1000) return;
+  status.classList.remove("blink");
   status.textContent = `${fps_frames} fps, gesture ${gesture}`;
   fps_frames = 0;
   fps_since = now;
@@ -136,8 +152,23 @@ async function main() {
     core.reset();
   };
 
+  const pause_button = document.getElementById("pause");
+  pause_button.onclick = () => {
+    paused = !paused;
+    pause_button.textContent = paused ? "Resume" : "Pause";
+    if (paused) {
+      cam.pause();
+      memeVideo.pause();
+      status.textContent = "paused";
+    } else {
+      cam.play();
+      if (!memeVideo.hidden) memeVideo.play();
+      core.reset();
+    }
+  };
+
   const tick = () => {
-    if (cam.readyState >= 2 && cam.videoWidth > 0) {
+    if (!paused && cam.readyState >= 2 && cam.videoWidth > 0) {
       const next = process_frame(core, landmarkers);
       if (next !== gesture) {
         gesture = next;
@@ -149,9 +180,11 @@ async function main() {
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
+  preload_memes(core);
 }
 
 main().catch((error) => {
+  status.classList.remove("blink");
   status.textContent = `error: ${error.message ?? error}`;
   console.error(error);
 });

@@ -53,6 +53,8 @@ emscripten::val meme_files(int gesture) {
     return emscripten::val::array(files);
 }
 
+int gesture_count() { return static_cast<int>(miaucam::all_gestures().size()); }
+
 bool flip_meme_now() { return miaucam::flip_meme(g_state); }
 
 bool is_video(int gesture) {
@@ -66,4 +68,5 @@ EMSCRIPTEN_BINDINGS(miaucam) {
     emscripten::function("meme_files", &meme_files);
     emscripten::function("is_video", &is_video);
     emscripten::function("flip_meme", &flip_meme_now);
+    emscripten::function("gesture_count", &gesture_count);
 }

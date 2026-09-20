@@ -4,27 +4,50 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>miaucam</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/nes.css@2.3.0/css/nes.min.css" rel="stylesheet">
   <style>
-    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: system-ui, sans-serif; }
-    #stage { position: relative; margin: 0 auto; overflow: hidden; background: #111;
-             width: min(100vw, 540px); height: min(100vh, 960px); }
+    html, body { margin: 0; height: 100%; overflow: hidden; font-family: "Press Start 2P", monospace; color: #fff;
+                 background-color: #0f0f2d;
+                 background-image: linear-gradient(#1a1a4a 2px, transparent 2px), linear-gradient(90deg, #1a1a4a 2px, transparent 2px);
+                 background-size: 32px 32px; }
+    #stage { position: relative; overflow: hidden; background: #1a1a2e;
+             width: min(calc(100vw - 16px), 540px); height: min(calc(100vh - 16px), 960px);
+             margin: 8px auto; box-shadow: 0 -8px #fff, 0 8px #fff, -8px 0 #fff, 8px 0 #fff, 0 0 0 8px #000; }
+    #stage::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+                    background: repeating-linear-gradient(transparent 0 2px, rgba(0, 0, 0, 0.18) 2px 4px); }
     #meme, #meme-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
     #meme-video[hidden], #meme[hidden] { display: none; }
-    #cam { position: absolute; top: max(24px, env(safe-area-inset-top)); right: 24px; width: 120px; height: 120px;
-           border-radius: 50%; object-fit: cover; background: #222; }
+    #bar { position: absolute; top: 12px; left: 12px; right: 140px; z-index: 2; text-shadow: 2px 2px #000; line-height: 1.5; overflow-wrap: anywhere; }
+    #title { font-size: 16px; color: #f7d51d; }
+    #status { margin-top: 8px; font-size: 8px; text-transform: uppercase; }
+    #status.blink { animation: blink 1s steps(2, start) infinite; }
+    @keyframes blink { to { visibility: hidden; } }
+    #cam { position: absolute; z-index: 2; top: max(12px, env(safe-area-inset-top)); right: 12px; width: 112px; height: 112px;
+           border-radius: 50%; object-fit: cover; background: #222; border: 4px solid #fff;
+           box-shadow: 4px 4px 0 #000; }
     #cam.mirrored { transform: scaleX(-1); }
-    #switch { position: absolute; bottom: max(32px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
-              padding: 14px 28px; border: 0; border-radius: 999px; background: #6750a4; color: #fff; font-size: 16px; }
-    #status { position: absolute; left: 12px; top: 12px; color: #fff; font-size: 12px; text-shadow: 0 0 4px #000; }
+    #github { position: absolute; z-index: 2; left: 16px; bottom: max(24px, env(safe-area-inset-bottom)); }
+    #controls { position: absolute; z-index: 2; bottom: max(24px, env(safe-area-inset-bottom)); left: 50%;
+                transform: translateX(-50%); display: flex; gap: 12px; }
+    #controls .nes-btn { font-family: inherit; font-size: 10px; }
   </style>
 </head>
 <body>
   <div id="stage">
     <img id="meme" alt="meme" hidden>
     <video id="meme-video" muted loop playsinline hidden></video>
+    <div id="bar">
+      <div id="title">MIAUCAM</div>
+      <div id="status" class="blink">loading...</div>
+    </div>
     <video id="cam" muted playsinline></video>
-    <div id="status">loading...</div>
-    <button id="switch">Switch camera</button>
+    <a id="github" class="nes-icon github is-large" href="https://github.com/IleanaAldama/miau_cam"
+       target="_blank" rel="noopener" aria-label="miaucam on GitHub"></a>
+    <div id="controls">
+      <button id="switch" class="nes-btn is-primary" type="button">Switch</button>
+      <button id="pause" class="nes-btn is-warning" type="button">Pause</button>
+    </div>
   </div>
   <script type="module" src="./app.js"></script>
 </body>

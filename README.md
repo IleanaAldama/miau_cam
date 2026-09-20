@@ -1,5 +1,9 @@
 # miaucam
 
+[![GitHub](https://img.shields.io/badge/GitHub-IleanaAldama%2Fmiau__cam-181717?logo=github)](https://github.com/IleanaAldama/miau_cam)
+[![web](https://github.com/IleanaAldama/miau_cam/actions/workflows/web.yml/badge.svg)](https://github.com/IleanaAldama/miau_cam/actions/workflows/web.yml)
+[![ios](https://github.com/IleanaAldama/miau_cam/actions/workflows/ios.yml/badge.svg)](https://github.com/IleanaAldama/miau_cam/actions/workflows/ios.yml)
+
 Webcam gesture → meme detector. Two windows open side by side: **Camera**
 (your webcam feed with hand landmarks drawn on top) and **Meme** (the cat
 meme matching whatever gesture you're making).
