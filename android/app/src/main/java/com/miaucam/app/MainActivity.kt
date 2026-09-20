@@ -106,7 +106,6 @@ private val analysisResolution = ResolutionSelector.Builder()
     .build()
 
 private fun loadMeme(context: Context, gesture: Int): ImageBitmap? {
-    if (NativeCore.isVideo(gesture)) return null
     val file = NativeCore.memeFiles(gesture).randomOrNull() ?: return null
     return context.assets.open(file).use { BitmapFactory.decodeStream(it) }?.asImageBitmap()
 }
@@ -124,6 +123,7 @@ fun MiaucamScreen() {
     val analysisExecutor = remember { Executors.newSingleThreadExecutor() }
     var gesture by remember { mutableIntStateOf(0) }
     var meme by remember { mutableStateOf<ImageBitmap?>(null) }
+    var video by remember { mutableStateOf<String?>(null) }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -133,7 +133,12 @@ fun MiaucamScreen() {
     }
 
     LaunchedEffect(gesture) {
-        meme = withContext(Dispatchers.IO) { loadMeme(context, gesture) } ?: meme
+        if (NativeCore.isVideo(gesture)) {
+            video = NativeCore.memeFiles(gesture).randomOrNull()
+        } else {
+            video = null
+            meme = withContext(Dispatchers.IO) { loadMeme(context, gesture) } ?: meme
+        }
     }
 
     LaunchedEffect(lensFacing) {
@@ -180,7 +185,10 @@ fun MiaucamScreen() {
 
     Box(Modifier.fillMaxSize()) {
         val shown = meme
-        if (shown != null) {
+        val playing = video
+        if (playing != null) {
+            MemeVideo(playing, Modifier.fillMaxSize())
+        } else if (shown != null) {
             Image(
                 bitmap = shown,
                 contentDescription = "meme",
