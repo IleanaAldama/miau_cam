@@ -101,8 +101,18 @@ unzip -q /tmp/opencv.zip -d android/third_party && mv android/third_party/OpenCV
 mkdir -p ~/Android/Sdk/ndk && ln -s /usr/lib/android-sdk/ndk/25.0.8775105 ~/Android/Sdk/ndk/25.0.8775105
 ```
 
-## What's not here yet
+## How gestures work here
 
-MediaPipe for Android (Bazel), the JNI call into `step()` from
-`src/miaucam_core.h`, and feeding CameraX `ImageAnalysis` frames to it. The
-meme is still a static placeholder.
+CameraX `ImageAnalysis` frames go to `GestureEngine.kt`, which runs
+MediaPipe Tasks (Maven `tasks-vision`, no Bazel needed on Android) for hand
+and face landmarks, then hands them through JNI to `advance()` in
+`src/frame_pipeline.cpp`, the same code the desktop app runs. The gesture it
+returns picks a still from `memes/`. Both `models/` and `memes/` are packaged
+as assets straight from the repo root.
+
+MediaPipe's Android library only ships ARM native code, so on the x86_64
+emulator the engine fails to load and the app falls back to the static UI
+(the failure is logged). Real detection needs an arm64 device.
+
+Not done yet: the `.mov` gestures (rockstar-style video memes) keep showing
+the last still, since video playback isn't wired in.
