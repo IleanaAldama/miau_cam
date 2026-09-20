@@ -29,3 +29,28 @@ flow_debug_log.csv
 *.swp
 .DS_Store
 .claude/
+
+# iOS generated project, pods and OpenCV build
+ios/Miaucam.xcodeproj/
+ios/Miaucam.xcworkspace/
+ios/Pods/
+ios/Podfile.lock
+ios/third_party/
+ios/build/
+*.xcuserstate
+
+# Signing keys and secrets, never commit
+*.p8
+*.p12
+*.cer
+*.mobileprovision
+*.jks
+*.keystore
+keystore.properties
+.env
+.env.*
+
+# Web build output and OpenCV wasm build
+web/build/
+web/dist/
+web/third_party/

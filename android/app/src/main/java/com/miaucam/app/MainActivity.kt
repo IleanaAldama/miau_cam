@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -124,6 +125,7 @@ fun MiaucamScreen() {
     var gesture by remember { mutableIntStateOf(0) }
     var meme by remember { mutableStateOf<ImageBitmap?>(null) }
     var video by remember { mutableStateOf<String?>(null) }
+    var flip by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -171,6 +173,7 @@ fun MiaucamScreen() {
             analysis.setAnalyzer(analysisExecutor) { image ->
                 try {
                     gesture = engine.process(image, mirror)
+                    flip = NativeCore.flipMeme()
                 } finally {
                     image.close()
                 }
@@ -192,15 +195,15 @@ fun MiaucamScreen() {
             Image(
                 bitmap = shown,
                 contentDescription = "meme",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().graphicsLayer(scaleX = if (flip) -1f else 1f),
+                contentScale = ContentScale.Fit,
             )
         } else {
             Image(
                 painter = painterResource(id = R.drawable.pokercat),
                 contentDescription = "meme",
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
+                contentScale = ContentScale.Fit,
             )
         }
 

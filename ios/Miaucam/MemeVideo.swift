@@ -25,7 +25,7 @@ struct MemeVideo: UIViewRepresentable {
         func play(_ url: URL) {
             self.url = url
             playerLayer.player = player
-            playerLayer.videoGravity = .resizeAspectFill
+            playerLayer.videoGravity = .resizeAspect
             player.isMuted = true
             looper = AVPlayerLooper(player: player, templateItem: AVPlayerItem(url: url))
             player.play()

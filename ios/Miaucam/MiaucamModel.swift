@@ -4,6 +4,7 @@ import SwiftUI
 final class MiaucamModel: ObservableObject {
     @Published var meme: UIImage?
     @Published var videoURL: URL?
+    @Published var flipped = false
     @Published var position: AVCaptureDevice.Position = .front
 
     let camera = CameraController()
@@ -24,9 +25,14 @@ final class MiaucamModel: ObservableObject {
     }
 
     private func handle(_ buffer: CMSampleBuffer) {
-        guard let next = engine?.process(buffer), next != gesture else { return }
+        guard let next = engine?.process(buffer) else { return }
+        let flip = MiaucamCore.isMemeFlipped()
+        let changed = next != gesture
         gesture = next
-        DispatchQueue.main.async { self.show(gesture: next) }
+        DispatchQueue.main.async {
+            if self.flipped != flip { self.flipped = flip }
+            if changed { self.show(gesture: next) }
+        }
     }
 
     private func show(gesture: Int) {

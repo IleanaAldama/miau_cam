@@ -17,6 +17,7 @@ NS_ASSUME_NONNULL_BEGIN
       blendshapeScores:(NSData *)scores
              transform:(NSData *)transform;
 
++ (BOOL)isMemeFlipped;
 + (NSArray<NSString *> *)memeFilesForGesture:(int)gesture;
 + (BOOL)isVideoGesture:(int)gesture;
 

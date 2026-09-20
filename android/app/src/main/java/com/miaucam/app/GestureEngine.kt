@@ -12,7 +12,6 @@ import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarker
 import com.google.mediapipe.tasks.vision.handlandmarker.HandLandmarker
 import java.io.Closeable
 import java.nio.ByteBuffer
-import kotlin.math.abs
 
 class GestureEngine(context: Context) : Closeable {
     private val hand = HandLandmarker.createFromOptions(
@@ -68,7 +67,7 @@ class GestureEngine(context: Context) : Closeable {
             faceFloats.toFloatArray(),
             blendshapes.map { it.categoryName() }.toTypedArray(),
             blendshapes.map { it.score() }.toFloatArray(),
-            transform?.let(::rowMajor) ?: FloatArray(0),
+            transform ?: FloatArray(0),
         )
     }
 
@@ -89,13 +88,6 @@ class GestureEngine(context: Context) : Closeable {
         bitmap.copyPixelsToBuffer(buffer)
         buffer.rewind()
         return buffer
-    }
-
-    // A pose matrix has its translation in one edge and zeros on the other.
-    private fun rowMajor(m: FloatArray): FloatArray {
-        val rightColumn = abs(m[3]) + abs(m[7]) + abs(m[11])
-        val bottomRow = abs(m[12]) + abs(m[13]) + abs(m[14])
-        return if (rightColumn >= bottomRow) m else FloatArray(16) { m[(it % 4) * 4 + it / 4] }
     }
 
     override fun close() {

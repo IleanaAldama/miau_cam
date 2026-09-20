@@ -12,7 +12,8 @@ struct ContentView: View {
             } else if let meme = model.meme {
                 Image(uiImage: meme)
                     .resizable()
-                    .scaledToFill()
+                    .scaledToFit()
+                    .scaleEffect(x: model.flipped ? -1 : 1)
                     .ignoresSafeArea()
             }
 

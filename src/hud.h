@@ -14,8 +14,4 @@ void draw_landmarks(cv::Mat& frame, const HandResult& hand_result);
 
 cv::Mat fit_to_height(const cv::Mat& img, int height);
 
-// side eye cat.jpg faces left by default; mirrors it when yaw_deg says the
-// subject turned the other way.
-cv::Mat orient_for_yaw(const cv::Mat& meme, double yaw_deg);
-
 }  // namespace miaucam

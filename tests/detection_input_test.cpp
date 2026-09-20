@@ -41,3 +41,13 @@ TEST(DetectionInput, WrongSizedTransformIsIgnored) {
     raw.transform.assign(9, 1.0f);
     EXPECT_FALSE(to_detection(raw).face.has_transform);
 }
+
+TEST(DetectionInput, ColumnMajorTransformIsTransposed) {
+    RawDetection raw;
+    raw.transform.assign(16, 0.0f);
+    raw.transform[12] = 7.0f;  // translation x, column-major
+    raw.transform[15] = 1.0f;
+    const auto detection = to_detection(raw);
+    EXPECT_FLOAT_EQ(detection.face.transform[3], 7.0f);
+    EXPECT_FLOAT_EQ(detection.face.transform[12], 0.0f);
+}

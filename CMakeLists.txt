@@ -116,6 +116,7 @@ add_executable(miaucam_tests
     tests/gesture_state_test.cpp
     tests/meme_catalog_test.cpp
     tests/detection_input_test.cpp
+    tests/frame_pipeline_test.cpp
     src/gesture.cpp
     src/hand_classifier.cpp
     src/face_signals.cpp

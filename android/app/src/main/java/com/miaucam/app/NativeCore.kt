@@ -21,6 +21,7 @@ object NativeCore {
         transform: FloatArray,
     ): Int
 
+    external fun flipMeme(): Boolean
     external fun memeFiles(gesture: Int): Array<String>
     external fun isVideo(gesture: Int): Boolean
 }

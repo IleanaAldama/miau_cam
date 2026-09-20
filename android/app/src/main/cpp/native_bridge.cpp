@@ -66,6 +66,10 @@ JNIEXPORT jint JNICALL Java_com_miaucam_app_NativeCore_advance(
     return static_cast<jint>(output.gesture);
 }
 
+JNIEXPORT jboolean JNICALL Java_com_miaucam_app_NativeCore_flipMeme(JNIEnv*, jobject) {
+    return miaucam::flip_meme(g_state);
+}
+
 JNIEXPORT jobjectArray JNICALL Java_com_miaucam_app_NativeCore_memeFiles(JNIEnv* env, jobject,
                                                                           jint gesture) {
     const auto& files = miaucam::all_gestures().at(static_cast<size_t>(gesture)).files;

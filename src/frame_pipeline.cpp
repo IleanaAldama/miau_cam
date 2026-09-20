@@ -5,6 +5,11 @@
 
 namespace miaucam {
 
+bool flip_meme(const CoreState& state) {
+    return state.current_gesture == Gesture::SideEyeCat && state.gesture_state.last_face &&
+           state.gesture_state.last_face->yaw_deg >= 0.0;
+}
+
 std::pair<CoreState, StepOutput> advance(CoreState state, const FrameInput& input,
                                            DetectionResult detection) {
     // Zero-copy view over the caller's own buffer, just for the flow pass.

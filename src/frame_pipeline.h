@@ -39,6 +39,9 @@ struct StepOutput {
     HandResult hand;
 };
 
+// The side-eye meme mirrors with head yaw; the sign was verified live.
+bool flip_meme(const CoreState& state);
+
 std::pair<CoreState, StepOutput> advance(CoreState state, const FrameInput& input,
                                            DetectionResult detection);
 

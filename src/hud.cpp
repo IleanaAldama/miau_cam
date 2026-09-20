@@ -91,12 +91,4 @@ cv::Mat fit_to_height(const cv::Mat& img, int height) {
     return out;
 }
 
-cv::Mat orient_for_yaw(const cv::Mat& meme, double yaw_deg) {
-    // sign verified live; backwards from what raw atan2 math suggests.
-    if (yaw_deg < 0.0) return meme;
-    cv::Mat flipped;
-    cv::flip(meme, flipped, 1);
-    return flipped;
-}
-
 }  // namespace miaucam

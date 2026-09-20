@@ -40,7 +40,7 @@ fun MemeVideo(file: String, modifier: Modifier = Modifier) {
             PlayerView(it).apply {
                 this.player = player
                 useController = false
-                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
             }
         },
         modifier = modifier.fillMaxSize(),

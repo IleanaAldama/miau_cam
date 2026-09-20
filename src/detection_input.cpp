@@ -1,6 +1,7 @@
 #include "detection_input.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace miaucam {
 
@@ -17,6 +18,18 @@ std::vector<Point3> to_points(std::vector<float>::const_iterator first,
         points.push_back({first[0], first[1], first[2]});
     }
     return points;
+}
+
+// A pose matrix has its translation in one edge and zeros on the other, which
+// tells row-major (right column) from column-major (bottom row).
+std::vector<float> to_row_major(const std::vector<float>& m) {
+    const float right_column = std::abs(m[3]) + std::abs(m[7]) + std::abs(m[11]);
+    const float bottom_row = std::abs(m[12]) + std::abs(m[13]) + std::abs(m[14]);
+    if (right_column >= bottom_row) return m;
+
+    std::vector<float> out(transform_size);
+    for (size_t i = 0; i < transform_size; ++i) out[i] = m[(i % 4) * 4 + i / 4];
+    return out;
 }
 
 }  // namespace
@@ -40,7 +53,8 @@ DetectionResult to_detection(const RawDetection& raw) {
 
     if (raw.transform.size() == transform_size) {
         detection.face.has_transform = true;
-        std::copy(raw.transform.begin(), raw.transform.end(), detection.face.transform);
+        const auto row_major = to_row_major(raw.transform);
+        std::copy(row_major.begin(), row_major.end(), detection.face.transform);
     }
     return detection;
 }

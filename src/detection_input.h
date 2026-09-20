@@ -14,7 +14,7 @@ struct RawDetection {
     std::vector<float> face;   // xyz per landmark
     std::vector<std::string> blendshape_names;
     std::vector<float> blendshape_scores;
-    std::vector<float> transform;  // 16 floats row-major, or empty
+    std::vector<float> transform;  // 16 floats, either layout, or empty
 };
 
 DetectionResult to_detection(const RawDetection& raw);

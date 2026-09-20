@@ -49,6 +49,10 @@ std::vector<float> to_floats(NSData* data) {
     return static_cast<int>(output.gesture);
 }
 
++ (BOOL)isMemeFlipped {
+    return miaucam::flip_meme(g_state);
+}
+
 + (NSArray<NSString *> *)memeFilesForGesture:(int)gesture {
     NSMutableArray<NSString *>* files = [NSMutableArray array];
     for (const auto& file : miaucam::all_gestures().at(static_cast<size_t>(gesture)).files) {
