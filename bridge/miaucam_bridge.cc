@@ -15,11 +15,10 @@ struct SharedMediaPipeFrame {
     mediapipe::Image image;
 };
 
-std::shared_ptr<SharedMediaPipeFrame> CreateSharedFrame(const uint8_t* rgb_data, int width,
-                                                          int height) {
+std::shared_ptr<SharedMediaPipeFrame> CreateSharedFrame(const RgbFrameView& frame_view) {
     auto image_frame = std::make_shared<mediapipe::ImageFrame>();
-    image_frame->CopyPixelData(mediapipe::ImageFormat::SRGB, width, height,
-                                width * 3, rgb_data,
+    image_frame->CopyPixelData(mediapipe::ImageFormat::SRGB, frame_view.width, frame_view.height,
+                                frame_view.stride, frame_view.data,
                                 mediapipe::ImageFrame::kDefaultAlignmentBoundary);
 
     auto frame = std::make_shared<SharedMediaPipeFrame>();

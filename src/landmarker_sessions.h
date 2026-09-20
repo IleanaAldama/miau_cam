@@ -1,12 +1,14 @@
-// Owns the two MediaPipe sessions; hides BGR->RGB + timestamp plumbing
-// behind detect().
+// Owns the two MediaPipe sessions behind a single detect() call. Takes RGB
+// bytes directly - no OpenCV/platform assumptions - so it works the same
+// from any frame source (cv::VideoCapture+cvtColor today, Android's camera
+// stack later).
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <string>
 
-#include <opencv2/core.hpp>
-
+#include "frame_pipeline.h"
 #include "miaucam_bridge.h"
 #include "result.h"
 
@@ -19,12 +21,7 @@ struct LandmarkerSessions {
 
 Result<LandmarkerSessions> create_landmarker_sessions(const std::string& models_dir);
 
-struct DetectionResult {
-    HandResult hand;
-    FaceResult face;
-};
-
-// bgr_frame must be a tightly-packed cv::Mat, not a sub-matrix/ROI.
-DetectionResult detect(LandmarkerSessions& sessions, const cv::Mat& bgr_frame, int64_t timestamp_ms);
+DetectionResult detect(LandmarkerSessions& sessions, const RgbFrameView& frame,
+                        int64_t timestamp_ms);
 
 }  // namespace miaucam

@@ -11,7 +11,7 @@ namespace miaucam {
 
 FlowSignal compute_frame_flow(const cv::Mat &frame, cv::Mat &prev_small_gray) {
   cv::Mat gray, small;
-  cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
+  cv::cvtColor(frame, gray, cv::COLOR_RGB2GRAY);
   cv::resize(gray, small,
              cv::Size(tuning::spin::flow_width, tuning::spin::flow_height));
 

@@ -87,6 +87,7 @@ add_executable(miaucam
     src/gesture_state.cpp
     src/meme_catalog.cpp
     src/landmarker_sessions.cpp
+    src/miaucam_core.cpp
     src/hud.cpp
 )
 target_include_directories(miaucam PRIVATE ${OpenCV_INCLUDE_DIRS})

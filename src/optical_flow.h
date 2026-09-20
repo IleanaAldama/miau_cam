@@ -13,11 +13,9 @@ struct FlowSignal {
     double coherence = 0.0;
 };
 
-// Downsizes both frames + runs Farneback optical flow between them,
-// reduced to (magnitude, coherence): how much of the frame moved
-// horizontally, and what fraction of that motion agreed on one direction.
-// prev_small_gray is updated in place for the next call; pass an empty Mat
-// for the very first frame.
+// frame: RGB24. Downsizes both frames + runs Farneback optical flow between
+// them, reduced to (magnitude, coherence). prev_small_gray is updated in
+// place for the next call; pass an empty Mat for the very first frame.
 FlowSignal compute_frame_flow(const cv::Mat& frame, cv::Mat& prev_small_gray);
 
 // Trailing-window state behind the spin trigger. Plain data - updated via

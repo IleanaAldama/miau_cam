@@ -1,7 +1,5 @@
 #include "landmarker_sessions.h"
 
-#include <opencv2/imgproc.hpp>
-
 namespace miaucam {
 
 Result<LandmarkerSessions> create_landmarker_sessions(const std::string& models_dir) {
@@ -18,16 +16,13 @@ Result<LandmarkerSessions> create_landmarker_sessions(const std::string& models_
     return Result<LandmarkerSessions>::Ok(LandmarkerSessions{std::move(hand), std::move(face)});
 }
 
-DetectionResult detect(LandmarkerSessions& sessions, const cv::Mat& bgr_frame, int64_t timestamp_ms) {
-    cv::Mat rgb;
-    cv::cvtColor(bgr_frame, rgb, cv::COLOR_BGR2RGB);
-
-    // Deep-copies rgb once; shared by both sessions instead of copying twice.
-    auto frame = CreateSharedFrame(rgb.data, rgb.cols, rgb.rows);
+DetectionResult detect(LandmarkerSessions& sessions, const RgbFrameView& frame,
+                        int64_t timestamp_ms) {
+    auto shared_frame = CreateSharedFrame(frame);
 
     DetectionResult result;
-    result.hand = sessions.hand->DetectForVideo(*frame, timestamp_ms);
-    result.face = sessions.face->DetectForVideo(*frame, timestamp_ms);
+    result.hand = sessions.hand->DetectForVideo(*shared_frame, timestamp_ms);
+    result.face = sessions.face->DetectForVideo(*shared_frame, timestamp_ms);
     return result;
 }
 

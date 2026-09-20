@@ -1,6 +1,12 @@
 # CMake build output
 build/
+android/build/
 compile_commands.json
+
+# Gradle - local.properties has machine-specific SDK paths
+android/.gradle/
+android/app/build/
+android/local.properties
 
 # MediaPipe source, fetched + patched automatically by CMakeLists.txt at
 # configure time (pinned commit + bridge/opencv_linux.patch). Pure build
@@ -17,3 +23,6 @@ flow_debug_log.csv
 .idea/
 *.swp
 .DS_Store
+
+# OpenCV Android SDK, downloaded by hand (see android/README.md)
+android/third_party/opencv/

@@ -39,14 +39,26 @@ struct FaceResult {
     float transform[16] = {};  // row-major 4x4, transform[r * 4 + c]
 };
 
+// Non-owning view over an RGB24 buffer someone else owns (a cv::Mat today,
+// an Android camera buffer later) - never held past the call it's passed
+// to. stride is the byte length of one row: width * 3 if tightly packed,
+// wider if the source pads rows (as Android's camera buffers often do).
+// Not a smart pointer on purpose: this doesn't own the memory, so wrapping
+// it in unique_ptr/shared_ptr would misrepresent who's responsible for it.
+struct RgbFrameView {
+    const uint8_t* data = nullptr;
+    int width = 0;
+    int height = 0;
+    int stride = 0;
+};
+
 // Opaque handle; defined only in miaucam_bridge.cc so mediapipe::Image
 // never leaks out. shared_ptr, not unique_ptr, so it stays destructible
 // from a TU that only has this forward declaration.
 struct SharedMediaPipeFrame;
 
-// Deep-copies rgb_data once; share the result across both sessions below.
-std::shared_ptr<SharedMediaPipeFrame> CreateSharedFrame(const uint8_t* rgb_data, int width,
-                                                          int height);
+// Deep-copies frame once; share the result across both sessions below.
+std::shared_ptr<SharedMediaPipeFrame> CreateSharedFrame(const RgbFrameView& frame);
 
 // Create() returns null on failure and fills *error.
 class HandLandmarkerSession {
