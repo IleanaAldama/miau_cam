@@ -22,14 +22,21 @@ bool face_is_fresh(const GestureState& s, double now_ms) {
     return s.last_face.has_value() && (now_ms - s.last_face->t_ms) < tuning::stability::face_stale_ms;
 }
 
-// EMA; has_previous false only on the first sighting (nothing to blend yet).
-double smooth(bool has_previous, double previous, double raw, double alpha) {
-    return has_previous ? alpha * raw + (1.0 - alpha) * previous : raw;
+// EMA; a nullopt previous reading is the first sighting (nothing to blend yet).
+double smooth(std::optional<double> previous, double raw, double alpha) {
+    return previous ? alpha * raw + (1.0 - alpha) * *previous : raw;
 }
 
-Vec3 smooth(bool has_previous, const Vec3& previous, const Vec3& raw, double alpha) {
-    if (!has_previous) return raw;
-    return previous * static_cast<float>(1.0 - alpha) + raw * static_cast<float>(alpha);
+Vec3 smooth(std::optional<Vec3> previous, const Vec3& raw, double alpha) {
+    if (!previous) return raw;
+    return *previous * static_cast<float>(1.0 - alpha) + raw * static_cast<float>(alpha);
+}
+
+// Maps one FaceSnapshot field onto an optional predecessor; nullopt when no
+// face has ever been seen, which the smooth* overloads treat as first data.
+template <typename T>
+std::optional<T> prev_field(const std::optional<FaceSnapshot>& prev, T FaceSnapshot::*member) {
+    return prev ? std::optional<T>((*prev).*member) : std::nullopt;
 }
 
 // Also the fallback for a two-hand frame's first hand once no two-hand
@@ -119,23 +126,22 @@ GestureState update_face(GestureState state, const FaceResult& face_result, doub
     auto snap = extract_face_snapshot(face_result, now_ms);
     if (!snap) return state;
 
-    // smooth before any threshold comparison in decide().
-    bool had_previous = state.last_face.has_value();
+    // Blend against the previous frame's snapshot; a missing predecessor just
+    // passes the raw reading straight through as first data.
     double alpha = tuning::smoothing::ema_alpha;
-
-    if (had_previous) {
-        const FaceSnapshot& prev = *state.last_face;
-        snap->mouth_center = smooth(had_previous, prev.mouth_center, snap->mouth_center, alpha);
-        snap->face_width = smooth(had_previous, prev.face_width, snap->face_width, alpha);
-        snap->mouth_open = smooth(had_previous, prev.mouth_open, snap->mouth_open, alpha);
-        snap->yaw_deg = smooth(had_previous, prev.yaw_deg, snap->yaw_deg, alpha);
-    }
+    snap->mouth_center =
+        smooth(prev_field(state.last_face, &FaceSnapshot::mouth_center), snap->mouth_center, alpha);
+    snap->face_width =
+        smooth(prev_field(state.last_face, &FaceSnapshot::face_width), snap->face_width, alpha);
+    snap->mouth_open =
+        smooth(prev_field(state.last_face, &FaceSnapshot::mouth_open), snap->mouth_open, alpha);
+    snap->yaw_deg = smooth(prev_field(state.last_face, &FaceSnapshot::yaw_deg), snap->yaw_deg, alpha);
     state.last_face = snap;
     state.last_yaw_debug = snap->yaw_deg;
 
     if (face_result.has_transform) {
         double raw_pitch = pitch_from_transform(face_result.transform);
-        state.last_pitch_debug = smooth(had_previous, state.last_pitch_debug, raw_pitch, alpha);
+        state.last_pitch_debug = smooth(state.last_pitch_debug, raw_pitch, alpha);
     }
 
     auto scores = blendshape_map(face_result);
@@ -143,12 +149,12 @@ GestureState update_face(GestureState state, const FaceResult& face_result, doub
         auto it = scores.find(k);
         return it == scores.end() ? 0.0f : it->second;
     };
-    state.last_jaw_open_debug = smooth(had_previous, state.last_jaw_open_debug, get("jawOpen"), alpha);
-    state.last_smile_debug = smooth(had_previous, state.last_smile_debug,
-                                     std::max(get("mouthSmileLeft"), get("mouthSmileRight")), alpha);
-    state.last_brow_raise_debug = smooth(had_previous, state.last_brow_raise_debug, get("browInnerUp"), alpha);
-    state.last_wink_debug = smooth(had_previous, state.last_wink_debug, wink_score(scores), alpha);
-    state.last_eye_wide_debug = smooth(had_previous, state.last_eye_wide_debug, eye_wide_score(scores), alpha);
+    state.last_jaw_open_debug = smooth(state.last_jaw_open_debug, get("jawOpen"), alpha);
+    state.last_smile_debug = smooth(state.last_smile_debug,
+                                    std::max(get("mouthSmileLeft"), get("mouthSmileRight")), alpha);
+    state.last_brow_raise_debug = smooth(state.last_brow_raise_debug, get("browInnerUp"), alpha);
+    state.last_wink_debug = smooth(state.last_wink_debug, wink_score(scores), alpha);
+    state.last_eye_wide_debug = smooth(state.last_eye_wide_debug, eye_wide_score(scores), alpha);
 
     return state;
 }
@@ -165,27 +171,30 @@ Gesture decide(const GestureState& state, const HandResult& hand_result, double 
             [&](const NoHands&) -> Gesture {
                 // mouthOpenCat lives in OneHand/TwoHands only, so it never
                 // clashes with huhCat (mouth+no-hand vs mouth+hand).
-                if (fresh && state.last_jaw_open_debug > tuning::huh::jaw_threshold &&
-                    state.last_eye_wide_debug > tuning::huh::eye_wide_threshold) {
+                if (fresh && state.last_jaw_open_debug.value_or(0.0) > tuning::huh::jaw_threshold &&
+                    state.last_eye_wide_debug.value_or(0.0) > tuning::huh::eye_wide_threshold) {
                     return Gesture::HuhCat;
                 }
                 if (fresh && std::abs(state.last_face->yaw_deg) > tuning::head_pose::side_eye_yaw_deg) {
                     return Gesture::SideEyeCat;
                 }
-                if (fresh && state.last_pitch_debug > tuning::head_pose::side_eye_down_pitch_deg) {
+                if (fresh && state.last_pitch_debug.value_or(0.0) >
+                                tuning::head_pose::side_eye_down_pitch_deg) {
                     return Gesture::SideEyeDownCat;
                 }
                 return Gesture::Default;
             },
             [&](const OneHand& one) -> Gesture {
                 // any hand shape counts; checked before hand-shape logic.
-                if (fresh && state.last_jaw_open_debug > tuning::expression::mouth_open_jaw_threshold) {
+                if (fresh && state.last_jaw_open_debug.value_or(0.0) >
+                                tuning::expression::mouth_open_jaw_threshold) {
                     return Gesture::MouthOpenCat;
                 }
                 return decide_single_hand_shape(state, one.hand, fresh);
             },
             [&](const TwoHands& two) -> Gesture {
-                if (fresh && state.last_jaw_open_debug > tuning::expression::mouth_open_jaw_threshold) {
+                if (fresh && state.last_jaw_open_debug.value_or(0.0) >
+                                tuning::expression::mouth_open_jaw_threshold) {
                     return Gesture::MouthOpenCat;
                 }
                 if (auto g = decide_two_hand_shape(state, two.first, two.second, fresh)) {

@@ -17,14 +17,14 @@ struct GestureState {
     bool face_seen_this_frame = false;
     SpinTrackerState spin;
 
-    // debug fields, surfaced on the HUD.
-    double last_yaw_debug = 0.0;
-    double last_pitch_debug = 0.0;
-    double last_jaw_open_debug = 0.0;
-    double last_smile_debug = 0.0;
-    double last_brow_raise_debug = 0.0;
-    double last_wink_debug = 0.0;
-    double last_eye_wide_debug = 0.0;
+    // debug fields, surfaced on the HUD. nullopt until first seen.
+    std::optional<double> last_yaw_debug;
+    std::optional<double> last_pitch_debug;
+    std::optional<double> last_jaw_open_debug;
+    std::optional<double> last_smile_debug;
+    std::optional<double> last_brow_raise_debug;
+    std::optional<double> last_wink_debug;
+    std::optional<double> last_eye_wide_debug;
 };
 
 GestureState update_flow(GestureState state, double magnitude, double coherence, double now_ms);
