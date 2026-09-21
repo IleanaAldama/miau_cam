@@ -1,6 +1,6 @@
-// Combines hand_classifier + face_signals + optical_flow into a named
+// Per-frame perception state plus the priority rules that turn it into a
 // gesture. Plain data plus free functions: update_flow/update_face take the
-// previous state by value and return the next one.
+// previous state by value and return the next one; decide is a pure function.
 #pragma once
 
 #include <optional>
@@ -13,24 +13,18 @@
 namespace miaucam {
 
 struct GestureState {
-    std::optional<FaceSnapshot> last_face;
+    std::optional<FaceSignals> last_face;  // smoothed; stale once the face is lost
     bool face_seen_this_frame = false;
     SpinTrackerState spin;
-
-    // debug fields, surfaced on the HUD. nullopt until first seen.
-    std::optional<double> last_yaw_debug;
-    std::optional<double> last_pitch_debug;
-    std::optional<double> last_jaw_open_debug;
-    std::optional<double> last_smile_debug;
-    std::optional<double> last_brow_raise_debug;
-    std::optional<double> last_wink_debug;
-    std::optional<double> last_eye_wide_debug;
 };
 
 GestureState update_flow(GestureState state, double magnitude, double coherence, double now_ms);
 GestureState update_face(GestureState state, const FaceResult& face_result, double now_ms);
 
-// Priority order matches gesture_meme.py exactly - see gesture_state.cpp.
+// The last face, only while it is recent enough to trust.
+std::optional<FaceSignals> fresh_face(const GestureState& state, double now_ms);
+
+// First matching rule wins, in a fixed priority order (see the rule list).
 Gesture decide(const GestureState& state, const HandResult& hand_result, double now_ms);
 
 }  // namespace miaucam

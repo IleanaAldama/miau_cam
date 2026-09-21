@@ -15,6 +15,7 @@ add_executable(miaucam_core
     ${MIAUCAM_ROOT}/src/optical_flow.cpp
     ${MIAUCAM_ROOT}/src/gesture_state.cpp
     ${MIAUCAM_ROOT}/src/frame_pipeline.cpp
+    ${MIAUCAM_ROOT}/src/debounce.cpp
     ${MIAUCAM_ROOT}/src/detection_input.cpp
 )
 target_include_directories(miaucam_core PRIVATE

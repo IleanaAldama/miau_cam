@@ -25,11 +25,11 @@ const std::vector<std::pair<int, int>> kHandConnections = {
 void draw_debug_hud(cv::Mat& frame, const GestureState& state, Gesture current_gesture) {
     char buf[256];
     std::vector<std::string> lines;
+    const FaceSignals face = state.last_face.value_or(FaceSignals{});
 
     lines.push_back("gesture: " + to_string(current_gesture));
 
-    std::snprintf(buf, sizeof(buf), "yaw: %+.1f deg  (side-eye thr +/-%.1f)",
-                  state.last_yaw_debug.value_or(0.0),
+    std::snprintf(buf, sizeof(buf), "yaw: %+.1f deg  (side-eye thr +/-%.1f)", face.yaw_deg,
                   tuning::head_pose::side_eye_yaw_deg);
     lines.push_back(buf);
 
@@ -47,21 +47,18 @@ void draw_debug_hud(cv::Mat& frame, const GestureState& state, Gesture current_g
     lines.push_back(buf);
 
     std::snprintf(buf, sizeof(buf), "jawOpen: %.2f  eyeWide: %.2f  (huh needs both > %.2f/%.2f)",
-                  state.last_jaw_open_debug.value_or(0.0),
-                  state.last_eye_wide_debug.value_or(0.0), tuning::huh::jaw_threshold,
+                  face.jaw_open, face.eye_wide, tuning::huh::jaw_threshold,
                   tuning::huh::eye_wide_threshold);
     lines.push_back(buf);
 
     std::snprintf(buf, sizeof(buf),
                   "smile: %.2f  browRaise: %.2f  wink: %.2f  <- not wired to a meme yet",
-                  state.last_smile_debug.value_or(0.0),
-                  state.last_brow_raise_debug.value_or(0.0), state.last_wink_debug.value_or(0.0));
+                  face.smile, face.brow_raise, face.wink);
     lines.push_back(buf);
 
     std::snprintf(buf, sizeof(buf),
                   "pitch: %+.1f deg  (side-eye-down thr %.1f, unvalidated - watch this while looking down)",
-                  state.last_pitch_debug.value_or(0.0),
-                  tuning::head_pose::side_eye_down_pitch_deg);
+                  face.pitch_deg, tuning::head_pose::side_eye_down_pitch_deg);
     lines.push_back(buf);
 
     for (size_t i = 0; i < lines.size(); ++i) {
@@ -86,13 +83,6 @@ void draw_landmarks(cv::Mat& frame, const HandResult& hand_result) {
         }
         for (const auto& p : pts) cv::circle(frame, p, 4, {60, 140, 255}, -1);
     }
-}
-
-cv::Mat fit_to_height(const cv::Mat& img, int height) {
-    double scale = static_cast<double>(height) / img.rows;
-    cv::Mat out;
-    cv::resize(img, out, cv::Size(static_cast<int>(img.cols * scale), height));
-    return out;
 }
 
 }  // namespace miaucam

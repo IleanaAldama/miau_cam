@@ -1,6 +1,7 @@
 #include "optical_flow.h"
 
 #include <algorithm>
+#include <cmath>
 
 #include <opencv2/imgproc.hpp>
 #include <opencv2/video.hpp>
@@ -9,51 +10,60 @@
 
 namespace miaucam {
 
-FlowSignal compute_frame_flow(const cv::Mat &frame, cv::Mat &prev_small_gray) {
-  cv::Mat gray, small;
-  cv::cvtColor(frame, gray, cv::COLOR_RGB2GRAY);
-  cv::resize(gray, small,
-             cv::Size(tuning::spin::flow_width, tuning::spin::flow_height));
+FlowStats collect_flow_stats(const cv::Mat &flow, double noise_floor_px) {
+  FlowStats stats;
+  stats.total = static_cast<long>(flow.rows) * flow.cols;
 
-  FlowSignal sig;
-  if (prev_small_gray.empty()) {
-    prev_small_gray = small;
-    return sig;
+  for (int y = 0; y < flow.rows; ++y) {
+    const cv::Vec2f *row = flow.ptr<cv::Vec2f>(y);
+    for (int x = 0; x < flow.cols; ++x) {
+      const float fx = row[x][0];
+      const float magnitude = std::abs(fx);
+      stats.sum_abs_x += magnitude;
+      if (magnitude <= noise_floor_px)
+        continue;
+
+      stats.moving++;
+      stats.sum_moving_x += fx;
+      (fx > 0 ? stats.positive : stats.negative)++;
+    }
   }
+  return stats;
+}
+
+FlowSignal flow_signal_from_stats(const FlowStats &stats) {
+  FlowSignal signal;
+  if (stats.total == 0)
+    return signal;
+
+  signal.magnitude = stats.sum_abs_x / stats.total;
+
+  const double moving_fraction = static_cast<double>(stats.moving) / stats.total;
+  if (stats.moving == 0 || moving_fraction < tuning::spin::flow_min_moving_fraction)
+    return signal;
+
+  const double dominant = stats.sum_moving_x;
+  if (dominant == 0.0)
+    return signal;
+
+  const long agree = dominant > 0 ? stats.positive : stats.negative;
+  signal.coherence = static_cast<double>(agree) / stats.moving;
+  return signal;
+}
+
+FlowResult compute_frame_flow(const cv::Mat &frame, const cv::Mat &prev_small_gray) {
+  cv::Mat small_rgb, small;
+  cv::resize(frame, small_rgb,
+             cv::Size(tuning::spin::flow_width, tuning::spin::flow_height));
+  cv::cvtColor(small_rgb, small, cv::COLOR_RGB2GRAY);
+
+  if (prev_small_gray.empty())
+    return {FlowSignal{}, small};
 
   cv::Mat flow;
-  cv::calcOpticalFlowFarneback(prev_small_gray, small, flow, 0.5, 2, 15, 2, 5,
-                               1.2, 0);
-  std::vector<cv::Mat> channels(2);
-  cv::split(flow, channels);
-  const cv::Mat &flow_x = channels[0];
-
-  sig.magnitude = cv::mean(cv::abs(flow_x))[0];
-
-  cv::Mat moving_mask = cv::abs(flow_x) > tuning::spin::flow_noise_floor_px;
-  int moving_count = cv::countNonZero(moving_mask);
-  int total = flow_x.rows * flow_x.cols;
-
-  if (static_cast<double>(moving_count) / total <
-      tuning::spin::flow_min_moving_fraction) {
-    sig.coherence = 0.0;
-    prev_small_gray = small;
-    return sig;
-  }
-
-  double masked_mean = cv::mean(flow_x, moving_mask)[0];
-  if (masked_mean == 0.0) {
-    sig.coherence = 0.0;
-  } else {
-    cv::Mat same_sign_mask = masked_mean > 0 ? (flow_x > 0) : (flow_x < 0);
-    cv::Mat agree_mask;
-    cv::bitwise_and(moving_mask, same_sign_mask, agree_mask);
-    int agree = cv::countNonZero(agree_mask);
-    sig.coherence = static_cast<double>(agree) / moving_count;
-  }
-
-  prev_small_gray = small;
-  return sig;
+  cv::calcOpticalFlowFarneback(prev_small_gray, small, flow, 0.5, 2, 15, 2, 5, 1.2, 0);
+  const FlowStats stats = collect_flow_stats(flow, tuning::spin::flow_noise_floor_px);
+  return {flow_signal_from_stats(stats), small};
 }
 
 namespace {

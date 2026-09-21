@@ -26,15 +26,27 @@ struct HandResult {
     std::vector<Hand> hands;
 };
 
-struct BlendshapeScore {
-    std::string name;
-    float score = 0.0f;
+// The four face-mesh points the app reads: indices 13, 14, 234 and 454.
+struct FaceKeypoints {
+    Point3 upper_lip, lower_lip, right_cheek, left_cheek;
+};
+
+// The blendshape scores the app reads; 0 when the model reported none.
+struct FaceExpression {
+    float jaw_open = 0.0f;
+    float smile_left = 0.0f;
+    float smile_right = 0.0f;
+    float brow_inner_up = 0.0f;
+    float blink_left = 0.0f;
+    float blink_right = 0.0f;
+    float eye_wide_left = 0.0f;
+    float eye_wide_right = 0.0f;
 };
 
 struct FaceResult {
     bool has_face = false;
-    std::vector<Point3> landmarks;  // 468 points, only if has_face
-    std::vector<BlendshapeScore> blendshapes;
+    FaceKeypoints keypoints;
+    FaceExpression expression;
     bool has_transform = false;
     float transform[16] = {};  // row-major 4x4, transform[r * 4 + c]
 };

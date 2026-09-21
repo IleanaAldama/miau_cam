@@ -12,6 +12,4 @@ namespace miaucam {
 void draw_debug_hud(cv::Mat& frame, const GestureState& state, Gesture current_gesture);
 void draw_landmarks(cv::Mat& frame, const HandResult& hand_result);
 
-cv::Mat fit_to_height(const cv::Mat& img, int height);
-
 }  // namespace miaucam

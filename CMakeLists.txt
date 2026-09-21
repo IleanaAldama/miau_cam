@@ -88,6 +88,8 @@ add_executable(miaucam
     src/meme_catalog.cpp
     src/landmarker_sessions.cpp
     src/frame_pipeline.cpp
+    src/debounce.cpp
+    src/meme_view.cpp
     src/miaucam_core.cpp
     src/hud.cpp
 )
@@ -117,12 +119,18 @@ add_executable(miaucam_tests
     tests/meme_catalog_test.cpp
     tests/detection_input_test.cpp
     tests/frame_pipeline_test.cpp
+    tests/debounce_test.cpp
+    tests/optical_flow_test.cpp
+    tests/face_signals_test.cpp
+    tests/meme_view_test.cpp
     src/gesture.cpp
     src/hand_classifier.cpp
     src/face_signals.cpp
     src/optical_flow.cpp
     src/gesture_state.cpp
     src/frame_pipeline.cpp
+    src/debounce.cpp
+    src/meme_view.cpp
     src/detection_input.cpp
     src/meme_catalog.cpp
 )

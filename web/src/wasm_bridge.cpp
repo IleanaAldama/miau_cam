@@ -31,15 +31,13 @@ emscripten::val frame_view(int size) {
 void reset() { g_state = miaucam::CoreState{}; }
 
 int advance(int width, int height, double timestamp_ms, const emscripten::val& hands,
-            const emscripten::val& face, const emscripten::val& blendshape_names,
-            const emscripten::val& blendshape_scores, const emscripten::val& transform) {
+            const emscripten::val& face, const emscripten::val& expression,
+            const emscripten::val& transform) {
     cv::Mat rgba(height, width, CV_8UC4, g_frame.data());
     cv::Mat rgb;
     cv::cvtColor(rgba, rgb, cv::COLOR_RGBA2RGB);
 
-    miaucam::RawDetection raw{floats(hands), floats(face),
-                              emscripten::vecFromJSArray<std::string>(blendshape_names),
-                              floats(blendshape_scores), floats(transform)};
+    miaucam::RawDetection raw{floats(hands), floats(face), floats(expression), floats(transform)};
 
     const miaucam::FrameInput input{{rgb.data, width, height, static_cast<int>(rgb.step)},
                                     timestamp_ms};

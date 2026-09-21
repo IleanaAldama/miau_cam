@@ -7,8 +7,22 @@ import {
 
 const MEDIAPIPE_WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
 const FRAME_WIDTH = 480;
-const FACE_LANDMARK_COUNT = 468;
 const MIN_HAND_CONFIDENCE = 0.6;
+
+// Face-mesh points the core reads (upper lip, lower lip, right cheek, left
+// cheek) and the blendshapes it reads, in the order the core expects.
+const FACE_KEYPOINTS = [13, 14, 234, 454];
+const EXPRESSION_KEYS = [
+  "jawOpen",
+  "mouthSmileLeft",
+  "mouthSmileRight",
+  "browInnerUp",
+  "eyeBlinkLeft",
+  "eyeBlinkRight",
+  "eyeWideLeft",
+  "eyeWideRight",
+];
+const EXPRESSION_INDEX = new Map(EXPRESSION_KEYS.map((key, index) => [key, index]));
 
 const cam = document.getElementById("cam");
 const memeImg = document.getElementById("meme");
@@ -66,6 +80,19 @@ function flatten(points) {
   return points.flatMap((p) => [p.x, p.y, p.z]);
 }
 
+function face_keypoints(landmarks) {
+  return landmarks ? flatten(FACE_KEYPOINTS.map((index) => landmarks[index])) : [];
+}
+
+function expression_scores(categories) {
+  const scores = new Float32Array(EXPRESSION_KEYS.length);
+  for (const category of categories) {
+    const index = EXPRESSION_INDEX.get(category.categoryName);
+    if (index !== undefined) scores[index] = category.score;
+  }
+  return scores;
+}
+
 const meme_url = (file) => `../memes/${encodeURIComponent(file)}`;
 
 // Warms the HTTP cache one file at a time so later gestures show instantly.
@@ -114,8 +141,6 @@ function process_frame(core, landmarkers) {
 
   const hands = landmarkers.hand.detectForVideo(canvas, ts);
   const faces = landmarkers.face.detectForVideo(canvas, ts);
-  const shapes = faces.faceBlendshapes[0]?.categories ?? [];
-  const face_points = (faces.faceLandmarks[0] ?? []).slice(0, FACE_LANDMARK_COUNT);
 
   const pixels = ctx.getImageData(0, 0, width, height).data;
   core.frame_view(pixels.length).set(pixels);
@@ -125,9 +150,8 @@ function process_frame(core, landmarkers) {
     height,
     ts,
     hands.landmarks.flatMap(flatten),
-    flatten(face_points),
-    shapes.map((s) => s.categoryName),
-    shapes.map((s) => s.score),
+    face_keypoints(faces.faceLandmarks[0]),
+    expression_scores(faces.faceBlendshapes[0]?.categories ?? []),
     faces.facialTransformationMatrixes[0]?.data ?? [],
   );
 }

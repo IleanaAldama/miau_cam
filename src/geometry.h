@@ -2,8 +2,8 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <cmath>
-#include <vector>
 
 #include <opencv2/core.hpp>
 
@@ -26,10 +26,15 @@ inline double angle_deg(const Vec3& v1, const Vec3& v2) {
     return std::acos(cos_a) * 180.0 / M_PI;
 }
 
-inline bool finger_extended(const std::vector<Vec3>& pts, int mcp, int pip, int tip) {
-    Vec3 v1 = pts[pip] - pts[mcp];
-    Vec3 v2 = pts[tip] - pts[pip];
-    return angle_deg(v1, v2) < 45.0;
+// Bent less than 45 degrees, compared by cosine to skip the acos.
+template <class Points>
+bool finger_extended(const Points& pts, int mcp, int pip, int tip) {
+    constexpr double cos_45 = 0.70710678118654752;
+    const Vec3 v1 = pts[pip] - pts[mcp];
+    const Vec3 v2 = pts[tip] - pts[pip];
+    const double m1 = cv::norm(v1), m2 = cv::norm(v2);
+    if (m1 < 1e-9 || m2 < 1e-9) return false;
+    return v1.dot(v2) / (m1 * m2) > cos_45;
 }
 
 // Yaw (left/right turn) from a row-major 4x4 facial transformation matrix.

@@ -13,10 +13,32 @@ struct FlowSignal {
     double coherence = 0.0;
 };
 
-// frame: RGB24. Downsizes both frames + runs Farneback optical flow between
-// them, reduced to (magnitude, coherence). prev_small_gray is updated in
-// place for the next call; pass an empty Mat for the very first frame.
-FlowSignal compute_frame_flow(const cv::Mat& frame, cv::Mat& prev_small_gray);
+// Everything the horizontal-flow reduction needs, gathered in one pass so the
+// math on top of it is a pure function with no OpenCV in sight.
+struct FlowStats {
+    double sum_abs_x = 0.0;
+    double sum_moving_x = 0.0;
+    long total = 0;
+    long moving = 0;
+    long positive = 0;
+    long negative = 0;
+};
+
+// A pixel is "moving" when its horizontal flow exceeds noise_floor_px.
+FlowStats collect_flow_stats(const cv::Mat& flow, double noise_floor_px);
+
+// magnitude is the mean |flow_x|; coherence is the share of moving pixels
+// that agree with the dominant direction.
+FlowSignal flow_signal_from_stats(const FlowStats& stats);
+
+struct FlowResult {
+    FlowSignal signal;
+    cv::Mat small_gray;  // pass back in as prev_small_gray for the next frame
+};
+
+// frame: RGB24. Downsizes to a small gray image and runs Farneback flow
+// against prev_small_gray (empty on the very first frame).
+FlowResult compute_frame_flow(const cv::Mat& frame, const cv::Mat& prev_small_gray);
 
 // Trailing-window state behind the spin trigger. Plain data - updated via
 // the free function below rather than member methods.

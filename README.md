@@ -45,10 +45,12 @@ Then open `http://localhost:8000/web/`.
 The app is split by domain in `src/`:
 - `geometry`: Vector math.
 - `hand_classifier`: Hand shape detection.
-- `face_signals`: Facial expression/pose detection.
-- `optical_flow`: Frame-to-frame motion detection.
-- `gesture_state`: Combines signals into gestures.
-- `meme_catalog`: Maps gestures to files.
+- `face_signals`: Smoothed face signals (`FaceSignals`) from four keypoints and the expression scores.
+- `optical_flow`: Frame-to-frame motion, reduced in one pass to a spin signal.
+- `gesture_state`: Perception state, plus `decide()`, an ordered list of priority rules.
+- `debounce`: Pure step that turns the jumpy per-frame gesture into the one shown.
+- `frame_pipeline`: `advance()` composes flow, face, decide and debounce; shared by every front end.
+- `meme_catalog`, `meme_view`: Gesture to files, and pure meme rendering with a cache.
 - `landmarker_sessions`: Manages MediaPipe models.
 - `hud`: Debug overlay.
 

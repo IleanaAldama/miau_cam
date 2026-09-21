@@ -15,6 +15,7 @@
 #include "gesture.h"
 #include "hud.h"
 #include "meme_catalog.h"
+#include "meme_view.h"
 #include "miaucam_core.h"
 #include "result.h"
 
@@ -69,6 +70,7 @@ int run() {
 
     std::mt19937 meme_rng{std::random_device{}()};
     cv::Mat current_meme = pick_meme(memes.value(), Gesture::Default, meme_rng);
+    MemeViewCache meme_cache;
 
     cv::Mat frame;
     while (cap.read(frame) && !frame.empty()) {
@@ -105,15 +107,9 @@ int run() {
         cv::Mat meme_view;
         if (is_video_gesture(output.gesture)) {
             cv::Mat vframe = next_video_frame(video_caps.value(), output.gesture);
-            meme_view = fit_to_height(vframe.empty() ? current_meme : vframe, frame.rows);
+            meme_view = render_meme(vframe.empty() ? current_meme : vframe, false, frame.rows);
         } else {
-            cv::Mat meme;
-            if (flip_meme(state)) {
-                cv::flip(current_meme, meme, 1);
-            } else {
-                meme = current_meme;
-            }
-            meme_view = fit_to_height(meme, frame.rows);
+            meme_view = cached_meme_view(meme_cache, current_meme, flip_meme(state), frame.rows);
         }
         cv::imshow("Camera", frame);
         cv::imshow("Meme", meme_view);

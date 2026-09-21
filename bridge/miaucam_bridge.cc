@@ -13,6 +13,23 @@ namespace miaucam {
 
 namespace {
 constexpr float kMinHandConfidence = 0.6f;
+
+template <class Landmark>
+Point3 to_point(const Landmark& lm) {
+    return Point3{lm.x, lm.y, lm.z};
+}
+
+float* expression_slot(FaceExpression& e, const std::string& name) {
+    if (name == "jawOpen") return &e.jaw_open;
+    if (name == "mouthSmileLeft") return &e.smile_left;
+    if (name == "mouthSmileRight") return &e.smile_right;
+    if (name == "browInnerUp") return &e.brow_inner_up;
+    if (name == "eyeBlinkLeft") return &e.blink_left;
+    if (name == "eyeBlinkRight") return &e.blink_right;
+    if (name == "eyeWideLeft") return &e.eye_wide_left;
+    if (name == "eyeWideRight") return &e.eye_wide_right;
+    return nullptr;
+}
 }  // namespace
 
 struct SharedMediaPipeFrame {
@@ -115,20 +132,19 @@ FaceResult FaceLandmarkerSession::DetectForVideo(const SharedMediaPipeFrame& fra
     auto detection = impl_->landmarker->DetectForVideo(frame.image, timestamp_ms);
     if (!detection.ok() || detection->face_landmarks.empty()) return result;
 
+    const auto& face = detection->face_landmarks[0].landmarks;
+    if (face.size() <= 454) return result;
+
     result.has_face = true;
-    const auto& face = detection->face_landmarks[0];
-    result.landmarks.reserve(face.landmarks.size());
-    for (const auto& lm : face.landmarks) {
-        result.landmarks.push_back(Point3{lm.x, lm.y, lm.z});
-    }
+    result.keypoints = {to_point(face[13]), to_point(face[14]), to_point(face[234]),
+                        to_point(face[454])};
 
     if (detection->face_blendshapes.has_value() &&
         !detection->face_blendshapes->empty()) {
         for (const auto& category : (*detection->face_blendshapes)[0].categories) {
-            BlendshapeScore score;
-            score.name = category.category_name.value_or("");
-            score.score = category.score;
-            result.blendshapes.push_back(std::move(score));
+            if (float* slot = expression_slot(result.expression, category.category_name.value_or(""))) {
+                *slot = category.score;
+            }
         }
     }
 

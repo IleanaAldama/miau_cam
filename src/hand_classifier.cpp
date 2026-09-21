@@ -1,7 +1,7 @@
 #include "hand_classifier.h"
 
 #include <algorithm>
-#include <vector>
+#include <array>
 
 #include "tuning.h"
 
@@ -18,11 +18,12 @@ bool plausible_hand(const HandInfo& h) {
 }  // namespace
 
 std::optional<HandInfo> classify_hand(const Hand& hand) {
-    if (hand.landmarks.size() < 21) return std::nullopt;
+    constexpr size_t landmark_count = 21;
+    if (hand.landmarks.size() < landmark_count) return std::nullopt;
 
-    std::vector<Vec3> pts;
-    pts.reserve(hand.landmarks.size());
-    for (const auto& lm : hand.landmarks) pts.push_back(p3(lm));
+    std::array<Vec3, landmark_count> pts;
+    std::transform(hand.landmarks.begin(), hand.landmarks.begin() + landmark_count, pts.begin(),
+                   [](const Point3& lm) { return p3(lm); });
 
     HandInfo h;
     h.hand_scale = std::max(dist(pts[0], pts[9]), 1e-6f);
@@ -48,19 +49,21 @@ std::optional<HandInfo> classify_hand(const Hand& hand) {
 }
 
 HandsView classify_hands(const HandResult& hand_result) {
-    std::vector<HandInfo> plausible;
-    plausible.reserve(std::min<size_t>(hand_result.hands.size(), 2));
+    std::optional<HandInfo> first, second;
     for (const Hand& hand : hand_result.hands) {
-        if (auto info = classify_hand(hand)) plausible.push_back(*std::move(info));
+        auto info = classify_hand(hand);
+        if (!info) continue;
+        if (!first) {
+            first = std::move(info);
+        } else {
+            second = std::move(info);
+            break;
+        }
     }
-    switch (plausible.size()) {
-        case 0:
-            return NoHands{};
-        case 1:
-            return OneHand{std::move(plausible[0])};
-        default:
-            return TwoHands{std::move(plausible[0]), std::move(plausible[1])};
-    }
+
+    if (!first) return NoHands{};
+    if (!second) return OneHand{*first};
+    return TwoHands{*first, *second};
 }
 
 }  // namespace miaucam

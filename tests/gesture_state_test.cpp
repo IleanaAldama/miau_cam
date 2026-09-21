@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "tuning.h"
+
 using namespace miaucam;
 
 namespace {
@@ -12,11 +14,10 @@ namespace {
 FaceResult make_face(double yaw_deg, float jaw_open, float eye_wide) {
     FaceResult f;
     f.has_face = true;
-    f.landmarks.resize(455);
-    f.landmarks[13] = {0.5f, 0.45f, 0};   // upper lip
-    f.landmarks[14] = {0.5f, 0.47f, 0};   // lower lip
-    f.landmarks[234] = {0.35f, 0.46f, 0}; // right cheek
-    f.landmarks[454] = {0.65f, 0.46f, 0}; // left cheek
+    f.keypoints = {{0.5f, 0.45f, 0},    // upper lip
+                   {0.5f, 0.47f, 0},    // lower lip
+                   {0.35f, 0.46f, 0},   // right cheek
+                   {0.65f, 0.46f, 0}};  // left cheek
 
     f.has_transform = true;
     double rad = yaw_deg * M_PI / 180.0;
@@ -29,9 +30,9 @@ FaceResult make_face(double yaw_deg, float jaw_open, float eye_wide) {
     };
     std::copy(std::begin(m), std::end(m), f.transform);
 
-    f.blendshapes.push_back({"jawOpen", jaw_open});
-    f.blendshapes.push_back({"eyeWideLeft", eye_wide});
-    f.blendshapes.push_back({"eyeWideRight", eye_wide});
+    f.expression.jaw_open = jaw_open;
+    f.expression.eye_wide_left = eye_wide;
+    f.expression.eye_wide_right = eye_wide;
     return f;
 }
 
@@ -90,4 +91,38 @@ TEST(GestureState, SpinBeatsEverything) {
     HandResult hands;
     hands.hands.push_back(make_fist_hand());  // would be Fist if spin didn't win
     EXPECT_EQ(decide(state, hands, t), Gesture::SpinCat);
+}
+
+TEST(GestureState, HuhNeedsOpenMouthAndWideEyesWithNoHands) {
+    GestureState state = update_face(GestureState{}, make_face(0.0, 0.2f, 0.2f), 0.0);
+    EXPECT_EQ(decide(state, HandResult{}, 0.0), Gesture::HuhCat);
+
+    HandResult hands;
+    hands.hands.push_back(make_fist_hand());
+    EXPECT_EQ(decide(state, hands, 0.0), Gesture::Fist);
+}
+
+TEST(GestureState, StaleFaceIsIgnored) {
+    GestureState state = update_face(GestureState{}, make_face(25.0, 0.0f, 0.0f), 0.0);
+    EXPECT_TRUE(fresh_face(state, 100.0).has_value());
+    EXPECT_FALSE(fresh_face(state, tuning::stability::face_stale_ms + 1.0).has_value());
+    EXPECT_EQ(decide(state, HandResult{}, tuning::stability::face_stale_ms + 1.0), Gesture::Default);
+}
+
+TEST(GestureState, FirstFaceSightingPassesThroughAndLaterOnesBlend) {
+    GestureState state = update_face(GestureState{}, make_face(20.0, 0.0f, 0.0f), 0.0);
+    ASSERT_TRUE(state.last_face.has_value());
+    EXPECT_NEAR(state.last_face->yaw_deg, 20.0, 1e-3);
+
+    state = update_face(std::move(state), make_face(0.0, 0.0f, 0.0f), 33.0);
+    const double alpha = tuning::smoothing::ema_alpha;
+    EXPECT_NEAR(state.last_face->yaw_deg, 20.0 * (1.0 - alpha), 1e-3);
+}
+
+TEST(GestureState, LosingTheFaceKeepsTheLastSignals) {
+    GestureState state = update_face(GestureState{}, make_face(20.0, 0.0f, 0.0f), 0.0);
+    state = update_face(std::move(state), FaceResult{}, 33.0);
+    EXPECT_FALSE(state.face_seen_this_frame);
+    ASSERT_TRUE(state.last_face.has_value());
+    EXPECT_NEAR(state.last_face->yaw_deg, 20.0, 1e-3);
 }

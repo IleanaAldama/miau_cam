@@ -21,19 +21,29 @@ TEST(DetectionInput, SplitsHandsAt21Landmarks) {
     EXPECT_FLOAT_EQ(detection.hand.hands[1].landmarks[20].z, 0.5f);
 }
 
-TEST(DetectionInput, FaceBlendshapesAndTransform) {
+TEST(DetectionInput, FaceKeypointsAndExpression) {
     RawDetection raw;
-    raw.face = {0.1f, 0.2f, 0.3f};
-    raw.blendshape_names = {"jawOpen", "eyeBlinkLeft"};
-    raw.blendshape_scores = {0.9f};
+    raw.face = {0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 1.0f, 1.1f, 1.2f};
+    raw.expression = {0.9f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f};
     raw.transform.assign(16, 0.0f);
     raw.transform[3] = 7.0f;
     const auto detection = to_detection(raw);
     EXPECT_TRUE(detection.face.has_face);
-    ASSERT_EQ(detection.face.blendshapes.size(), 1u);
-    EXPECT_EQ(detection.face.blendshapes[0].name, "jawOpen");
+    EXPECT_FLOAT_EQ(detection.face.keypoints.lower_lip.y, 0.5f);
+    EXPECT_FLOAT_EQ(detection.face.keypoints.left_cheek.z, 1.2f);
+    EXPECT_FLOAT_EQ(detection.face.expression.jaw_open, 0.9f);
+    EXPECT_FLOAT_EQ(detection.face.expression.eye_wide_right, 0.7f);
     EXPECT_TRUE(detection.face.has_transform);
     EXPECT_FLOAT_EQ(detection.face.transform[3], 7.0f);
+}
+
+TEST(DetectionInput, WrongSizedFaceOrExpressionIsIgnored) {
+    RawDetection raw;
+    raw.face = {0.1f, 0.2f, 0.3f};
+    raw.expression = {0.9f};
+    const auto detection = to_detection(raw);
+    EXPECT_FALSE(detection.face.has_face);
+    EXPECT_FLOAT_EQ(detection.face.expression.jaw_open, 0.0f);
 }
 
 TEST(DetectionInput, WrongSizedTransformIsIgnored) {
