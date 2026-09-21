@@ -11,6 +11,10 @@
 
 namespace miaucam {
 
+namespace {
+constexpr float kMinHandConfidence = 0.6f;
+}  // namespace
+
 struct SharedMediaPipeFrame {
     mediapipe::Image image;
 };
@@ -41,6 +45,8 @@ std::unique_ptr<HandLandmarkerSession> HandLandmarkerSession::Create(
     options->base_options.model_asset_path = model_path;
     options->running_mode = mediapipe::tasks::vision::core::RunningMode::VIDEO;
     options->num_hands = num_hands;
+    options->min_hand_detection_confidence = kMinHandConfidence;
+    options->min_hand_presence_confidence = kMinHandConfidence;
 
     auto landmarker =
         mediapipe::tasks::vision::hand_landmarker::HandLandmarker::Create(

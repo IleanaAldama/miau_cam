@@ -69,5 +69,12 @@ namespace hand_shape {
 constexpr double thumb_out_spread = 1.05;
 }  // namespace hand_shape
 
+namespace hand {
+// hand_scale is wrist-to-palm in normalized units; smaller is not hand-sized.
+// Index-tip reach beyond this many palm lengths means non-hand landmarks.
+constexpr double min_hand_scale = 0.03;
+constexpr double max_reach_ratio = 4.0;
+}  // namespace hand
+
 }  // namespace tuning
 }  // namespace miaucam

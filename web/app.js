@@ -8,6 +8,7 @@ import {
 const MEDIAPIPE_WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
 const FRAME_WIDTH = 480;
 const FACE_LANDMARK_COUNT = 468;
+const MIN_HAND_CONFIDENCE = 0.6;
 
 const cam = document.getElementById("cam");
 const memeImg = document.getElementById("meme");
@@ -32,6 +33,8 @@ async function create_landmarkers() {
         baseOptions: { modelAssetPath: "../models/hand_landmarker.task", delegate },
         runningMode: "VIDEO",
         numHands: 2,
+        minHandDetectionConfidence: MIN_HAND_CONFIDENCE,
+        minHandPresenceConfidence: MIN_HAND_CONFIDENCE,
       }),
       FaceLandmarker.createFromOptions(fileset, {
         baseOptions: { modelAssetPath: "../models/face_landmarker.task", delegate },

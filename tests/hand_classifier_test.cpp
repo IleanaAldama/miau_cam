@@ -29,24 +29,31 @@ Hand make_hand(bool index_up, bool middle_up, bool ring_up, bool pinky_up, bool 
 }  // namespace
 
 TEST(HandClassifier, OpenPalmHasNoCurledFingers) {
-    HandInfo h = classify_hand(make_hand(true, true, true, true, false));
-    EXPECT_TRUE(h.index_up && h.middle_up && h.ring_up && h.pinky_up);
-    EXPECT_EQ(h.curled_count, 0);
+    auto h = classify_hand(make_hand(true, true, true, true, false));
+    ASSERT_TRUE(h.has_value());
+    EXPECT_TRUE(h->index_up && h->middle_up && h->ring_up && h->pinky_up);
+    EXPECT_EQ(h->curled_count, 0);
 }
 
 TEST(HandClassifier, FistCurlsAllFour) {
-    HandInfo h = classify_hand(make_hand(false, false, false, false, false));
-    EXPECT_EQ(h.curled_count, 4);
+    auto h = classify_hand(make_hand(false, false, false, false, false));
+    ASSERT_TRUE(h.has_value());
+    EXPECT_EQ(h->curled_count, 4);
 }
 
 TEST(HandClassifier, PointingIsIndexOnly) {
-    EXPECT_TRUE(is_pointing(classify_hand(make_hand(true, false, false, false, false))));
-    EXPECT_FALSE(is_pointing(classify_hand(make_hand(true, true, false, false, false))));
+    auto point = classify_hand(make_hand(true, false, false, false, false));
+    ASSERT_TRUE(point.has_value());
+    EXPECT_TRUE(is_pointing(*point));
+    auto two_up = classify_hand(make_hand(true, true, false, false, false));
+    ASSERT_TRUE(two_up.has_value());
+    EXPECT_FALSE(is_pointing(*two_up));
 }
 
 TEST(HandClassifier, RockstarShape) {
-    HandInfo h = classify_hand(make_hand(false, false, false, true, true));
-    EXPECT_TRUE(h.thumb_out && h.pinky_up && !h.index_up && !h.middle_up && !h.ring_up);
+    auto h = classify_hand(make_hand(false, false, false, true, true));
+    ASSERT_TRUE(h.has_value());
+    EXPECT_TRUE(h->thumb_out && h->pinky_up && !h->index_up && !h->middle_up && !h->ring_up);
 }
 
 TEST(HandClassifier, ClassifyHandsDispatchesOnCount) {
@@ -61,4 +68,38 @@ TEST(HandClassifier, ClassifyHandsDispatchesOnCount) {
     two.hands.push_back(make_hand(true, false, false, false, false));
     two.hands.push_back(make_hand(false, false, false, false, false));
     EXPECT_TRUE(std::holds_alternative<TwoHands>(classify_hands(two)));
+}
+
+// A collapsed clump of landmarks (shadow edge) isn't a hand shape at all.
+TEST(HandClassifier, CollapsedHandIsNotAPlausibleShape) {
+    Hand collapsed;
+    collapsed.landmarks.resize(21, {0.5f, 0.7f, 0});
+    EXPECT_FALSE(classify_hand(collapsed).has_value());
+
+    HandResult one;
+    one.hands.push_back(collapsed);
+    EXPECT_TRUE(std::holds_alternative<NoHands>(classify_hands(one)));
+}
+
+TEST(HandClassifier, StretchedFragmentIsNotAPlausibleShape) {
+    Hand stretched = make_hand(true, true, true, true, false);
+    stretched.landmarks[8] = {0.5f, -5.0f, 0};  // fingertip far beyond palm reach
+    EXPECT_FALSE(classify_hand(stretched).has_value());
+}
+
+TEST(HandClassifier, TooFewLandmarksIsNotAHand) {
+    Hand partial = make_hand(true, true, true, true, false);
+    partial.landmarks.resize(20);
+    EXPECT_FALSE(classify_hand(partial).has_value());
+}
+
+TEST(HandClassifier, ImplausibleOneOfTwoDegradesToOneHand) {
+    HandResult two;
+    two.hands.push_back(make_hand(true, false, false, false, false));
+    Hand collapsed;
+    collapsed.landmarks.resize(21, {0.5f, 0.7f, 0});
+    two.hands.push_back(collapsed);
+    auto view = classify_hands(two);
+    ASSERT_TRUE(std::holds_alternative<OneHand>(view));
+    EXPECT_TRUE(is_pointing(std::get<OneHand>(view).hand));
 }

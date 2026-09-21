@@ -1,6 +1,7 @@
 // "What is this hand doing" - a shape description, independent of gesture.
 #pragma once
 
+#include <optional>
 #include <variant>
 
 #include "geometry.h"
@@ -16,7 +17,9 @@ struct HandInfo {
     Vec3 index_tip, wrist, palm_center;
 };
 
-HandInfo classify_hand(const Hand& hand);
+// nullopt when the detection isn't a plausible hand shape (collapsed or
+// stretched landmarks), so a shadow/edge can't masquerade as a gesture input.
+std::optional<HandInfo> classify_hand(const Hand& hand);
 
 inline bool is_pointing(const HandInfo& h) {
     return h.index_up && !h.middle_up && !h.ring_up && !h.pinky_up;

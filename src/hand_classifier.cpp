@@ -1,12 +1,25 @@
 #include "hand_classifier.h"
 
 #include <algorithm>
+#include <vector>
 
 #include "tuning.h"
 
 namespace miaucam {
 
-HandInfo classify_hand(const Hand& hand) {
+namespace {
+// Collapsed clumps and stretched fragments (a detector locking onto a shadow
+// edge) aren't hands: a real fingertip stays within a few palm lengths.
+bool plausible_hand(const HandInfo& h) {
+    if (h.hand_scale < tuning::hand::min_hand_scale) return false;
+    const float tip_reach = dist(h.index_tip, h.wrist);
+    return tip_reach / h.hand_scale <= tuning::hand::max_reach_ratio;
+}
+}  // namespace
+
+std::optional<HandInfo> classify_hand(const Hand& hand) {
+    if (hand.landmarks.size() < 21) return std::nullopt;
+
     std::vector<Vec3> pts;
     pts.reserve(hand.landmarks.size());
     for (const auto& lm : hand.landmarks) pts.push_back(p3(lm));
@@ -29,18 +42,24 @@ HandInfo classify_hand(const Hand& hand) {
     h.index_tip = pts[8];
     h.wrist = pts[0];
     h.palm_center = pts[9];
+
+    if (!plausible_hand(h)) return std::nullopt;
     return h;
 }
 
 HandsView classify_hands(const HandResult& hand_result) {
-    switch (hand_result.hands.size()) {
+    std::vector<HandInfo> plausible;
+    plausible.reserve(std::min<size_t>(hand_result.hands.size(), 2));
+    for (const Hand& hand : hand_result.hands) {
+        if (auto info = classify_hand(hand)) plausible.push_back(*std::move(info));
+    }
+    switch (plausible.size()) {
         case 0:
             return NoHands{};
         case 1:
-            return OneHand{classify_hand(hand_result.hands[0])};
+            return OneHand{std::move(plausible[0])};
         default:
-            return TwoHands{classify_hand(hand_result.hands[0]),
-                             classify_hand(hand_result.hands[1])};
+            return TwoHands{std::move(plausible[0]), std::move(plausible[1])};
     }
 }
 
